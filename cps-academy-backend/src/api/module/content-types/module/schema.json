@@ -26,6 +26,12 @@
       "relation": "oneToMany",
       "target": "api::course.course",
       "mappedBy": "modules"
+    },
+    "classes": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::class.class",
+      "inversedBy": "module"
     }
   }
 }

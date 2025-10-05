@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "classes",
+  "info": {
+    "singularName": "class",
+    "pluralName": "classes",
+    "displayName": "Class"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "topics": {
+      "type": "text"
+    },
+    "videoUrl": {
+      "type": "string"
+    },
+    "duration": {
+      "type": "integer"
+    },
+    "order": {
+      "type": "integer"
+    },
+    "module": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::module.module",
+      "mappedBy": "classes"
+    }
+  }
+}
