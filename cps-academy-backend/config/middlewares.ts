@@ -19,7 +19,7 @@ export default [
     name: 'strapi::cors',
     config: {
       enabled: true,
-      origin: ['http://localhost:3000', 'https://*.vercel.app'],
+      origin: ['http://localhost:3000', 'https://cps-academy-ecru.vercel.app' ,'https://*.vercel.app'],
       credentials: true,
     },
   },
