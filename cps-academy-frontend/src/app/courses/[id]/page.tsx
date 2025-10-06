@@ -144,17 +144,6 @@ export default function CourseDetailPage() {
             
             <h1 className="text-5xl font-extrabold mb-4 drop-shadow-lg">{course.title}</h1>
             <p className="text-xl text-purple-100 mb-6 max-w-3xl">{extractDescription(course.description)}</p>
-            
-            <div className="flex flex-wrap gap-3 mb-6">
-              {parseAllowedRoles(course.allowedRoles).map((role, index) => (
-                <span
-                  key={index}
-                  className="px-4 py-2 bg-white bg-opacity-25 backdrop-blur-sm rounded-full text-sm font-semibold border border-white border-opacity-30"
-                >
-                  🎯 {role}
-                </span>
-              ))}
-            </div>
 
             {!hasAccess && (
               <div className="bg-red-600 bg-opacity-95 p-5 rounded-xl inline-block border-2 border-red-400 shadow-xl">
