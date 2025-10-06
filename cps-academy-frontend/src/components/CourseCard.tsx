@@ -46,20 +46,36 @@ export default function CourseCard({ course, hasAccess }: CourseCardProps) {
   const allowedRoles = parseAllowedRoles(course.allowedRoles);
   const description = extractDescription(course.description);
   
+  // Get thumbnail URL from Strapi
+  const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337';
+  const thumbnailUrl = course.thumbnail?.url 
+    ? `${API_URL}${course.thumbnail.url}`
+    : null;
+  
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
       {/* Course Image/Thumbnail */}
-      <div className="h-48 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 flex items-center justify-center relative">
+      <div className="h-48 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 flex items-center justify-center relative overflow-hidden">
+        {thumbnailUrl ? (
+          <img 
+            src={thumbnailUrl} 
+            alt={course.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="text-white text-6xl font-bold opacity-20">
+            {course.title.charAt(0)}
+          </div>
+        )}
+        
+        {/* Lock Overlay for restricted courses */}
         {!hasAccess && (
-          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
             <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
         )}
-        <div className="text-white text-6xl font-bold opacity-20">
-          {course.title.charAt(0)}
-        </div>
       </div>
 
       {/* Course Content */}

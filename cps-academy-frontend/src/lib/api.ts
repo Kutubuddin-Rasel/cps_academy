@@ -49,7 +49,7 @@ export const authAPI = {
 
 export const courseAPI = {
   getAll: async () => {
-    const { data } = await api.get('/api/courses?populate=*');
+    const { data } = await api.get('/api/courses?populate=thumbnail');
     return data;
   },
 
