@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { courseAPI } from '@/lib/api';
 import { Course } from '@/types';
@@ -14,40 +14,29 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchCourses();
+
+const fetchCourses = useCallback(async () => {
+    try {
+      const response = await courseAPI.getAll();
+      const coursesData = response.data || [];
+      
+      const parsedCourses = coursesData.map((course: Course) => ({
+        ...course,
+        allowedRoles: parseAllowedRoles(course.allowedRoles)
+      }));
+      
+      setCourses(parsedCourses);
+    } catch (err) {
+      setError('Failed to load courses');
+      console.error('Fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-const fetchCourses = async () => {
-  try {
-    const response = await courseAPI.getAll();
-    console.log('Raw API Response:', response);
-    console.log('Courses data:', response.data);
-    
-    const coursesData = response.data || [];
-    
-    // Log each course
-    coursesData.forEach((course: Course, index: number) => {
-      console.log(`Course ${index}:`, course);
-      console.log(`AllowedRoles type:`, typeof course.allowedRoles);
-      console.log(`AllowedRoles value:`, course.allowedRoles);
-    });
-    
-    // Parse allowedRoles if it's a JSON string
-    const parsedCourses = coursesData.map((course: Course) => ({
-      ...course,
-      allowedRoles: parseAllowedRoles(course.allowedRoles)
-    }));
-    
-    console.log('Parsed courses:', parsedCourses);
-    setCourses(parsedCourses);
-  } catch (err) {
-    setError('Failed to load courses');
-    console.error('Fetch error:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
 
   const parseAllowedRoles = (roles: string[] | string): string[] => {

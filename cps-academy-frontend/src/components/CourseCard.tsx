@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Course } from '@/types';
+import Image from 'next/image';
 
 interface CourseCardProps {
   course: Course;
@@ -23,7 +24,7 @@ const parseAllowedRoles = (roles: string[] | string): string[] => {
 };
 
 // Helper to extract text from Strapi rich text
-const extractDescription = (description: any): string => {
+const extractDescription = (description: unknown): string => {
   if (typeof description === 'string') {
     return description;
   }
@@ -32,7 +33,7 @@ const extractDescription = (description: any): string => {
     return description
       .map((block) => {
         if (block.children && Array.isArray(block.children)) {
-          return block.children.map((child: any) => child.text || '').join('');
+          return block.children.map((child: { text?: string }) => child.text || '').join('');
         }
         return '';
       })
@@ -57,10 +58,10 @@ export default function CourseCard({ course, hasAccess }: CourseCardProps) {
       {/* Course Image/Thumbnail */}
       <div className="h-48 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 flex items-center justify-center relative overflow-hidden">
         {thumbnailUrl ? (
-          <img 
+          <Image
             src={thumbnailUrl} 
             alt={course.title}
-            className="w-full h-full object-cover"
+            className="object-cover"
           />
         ) : (
           <div className="text-white text-6xl font-bold opacity-20">

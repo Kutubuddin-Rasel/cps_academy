@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { courseAPI } from '@/lib/api';
-import { Course, Module as ModuleType } from '@/types';
+import { Course} from '@/types';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -35,13 +35,13 @@ export default function CourseDetailPage() {
     }
   };
 
-  const extractDescription = (description: any): string => {
+  const extractDescription = (description: unknown): string => {
     if (typeof description === 'string') return description;
     if (Array.isArray(description)) {
       return description
         .map((block) => {
           if (block.children && Array.isArray(block.children)) {
-            return block.children.map((child: any) => child.text || '').join('');
+            return block.children.map((child: { text?: string }) => child.text || '').join('');
           }
           return '';
         })

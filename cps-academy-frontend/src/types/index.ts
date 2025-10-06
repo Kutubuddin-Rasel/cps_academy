@@ -2,7 +2,7 @@ export interface Course {
   id: number;
   documentId: string;
   title: string;
-  description: string | { type: string; children: { type: string; text: string }[] }[] | any;
+  description: string | Array<{ type: string; children: Array<{ type: string; text: string }>}>;
   thumbnail?: {
     url: string;
   };

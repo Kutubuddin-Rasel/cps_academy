@@ -11,7 +11,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-grow">
         {/* Hero Section - Competitive Programming Focus */}
         <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white py-20 overflow-hidden">
@@ -22,7 +22,7 @@ export default function Home() {
                 Master Competitive Programming
               </h1>
               <p className="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
-                Become a pro competitive programmer with CPS Academy's comprehensive bootcamps. Master problem-solving from absolute beginner to FAANG interviews.
+                Become a pro competitive programmer with CPS Academy&apos;s comprehensive bootcamps. Master problem-solving from absolute beginner to FAANG interviews.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 {user ? (
@@ -42,7 +42,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-          
+
           {/* Decorative Elements */}
           <div className="absolute top-0 left-0 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
           <div className="absolute bottom-0 right-0 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
@@ -171,13 +171,13 @@ export default function Home() {
                 Join CPS Academy and transform your coding skills with expert-led bootcamps
               </p>
               <Link href="/register" className="bg-white text-purple-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition inline-block shadow-lg">
-                Enroll Now - It's Free
+                Enroll Now - It&apos;s Free
               </Link>
             </div>
           </section>
         )}
       </main>
-      
+
       <Footer />
     </div>
   );
