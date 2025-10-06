@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'http',
-        hostname: 'localhost',
-        port: '1337',
+        hostname: 'cpsacademy-production.up.railway.app',
+        port: '',
         pathname: '/uploads/**',
       },
     ],
