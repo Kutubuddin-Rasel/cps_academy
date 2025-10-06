@@ -54,9 +54,10 @@ export const courseAPI = {
   },
 
   getById: async (id: string) => {
-    const { data } = await api.get(`/api/courses/${id}?populate[modules][populate]=classes`);
+    const { data } = await api.get(`/api/courses/${id}?populate=modules.classes`);
     return data;
   },
 };
+
 
 export default api;
