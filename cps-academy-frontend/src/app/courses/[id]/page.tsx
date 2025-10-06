@@ -117,7 +117,7 @@ export default function CourseDetailPage() {
   }
 
   const hasAccess = checkAccess();
-  const modules = course.modules || [];
+  const modules = Array.isArray(course.modules) ? course.modules : [];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -180,9 +180,9 @@ export default function CourseDetailPage() {
                   <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-4 border border-gray-100">
                     <h3 className="text-2xl font-bold mb-6 text-gray-900">📖 Modules</h3>
                     <div className="space-y-3">
-                      {modules
-                        .sort((a, b) => a.order - b.order)
-                        .map((module, index) => (
+                      {modules.length > 0 && [...modules]
+                       .sort((a, b) => a.order - b.order)
+                         .map((module, index) => (
                           <button
                             key={module.id}
                             onClick={() => setSelectedModule(index)}
@@ -215,9 +215,10 @@ export default function CourseDetailPage() {
                         <h3 className="text-3xl font-bold mb-6 text-gray-900">🎓 Classes</h3>
                         {modules[selectedModule].classes && modules[selectedModule].classes!.length > 0 ? (
                           <div className="space-y-6">
-                            {modules[selectedModule].classes!
-                              .sort((a, b) => a.order - b.order)
-                              .map((classItem) => (
+                            {modules[selectedModule].classes && Array.isArray(modules[selectedModule].classes) && 
+                                   [...modules[selectedModule].classes]
+                                   .sort((a, b) => a.order - b.order)
+                                  .map((classItem) => (
                                 <div
                                   key={classItem.id}
                                   className="border-2 border-gray-200 rounded-xl p-6 hover:border-purple-300 hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-white to-gray-50"
