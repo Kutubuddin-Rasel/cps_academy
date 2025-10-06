@@ -22,7 +22,7 @@
       "type": "string"
     },
     "duration": {
-      "type": "integer"
+      "type": "decimal"
     },
     "order": {
       "type": "integer"

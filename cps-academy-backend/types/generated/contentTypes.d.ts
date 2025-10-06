@@ -444,7 +444,7 @@ export interface ApiClassClass extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    duration: Schema.Attribute.Integer;
+    duration: Schema.Attribute.Decimal;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::class.class'> &
       Schema.Attribute.Private;
