@@ -1,0 +1,27 @@
+{
+  "collectionName": "components_quiz_questions",
+  "info": {
+    "displayName": "Question"
+  },
+  "options": {},
+  "attributes": {
+    "questionKey": {
+      "type": "string",
+      "required": true
+    },
+    "prompt": {
+      "type": "text",
+      "required": true
+    },
+    "options": {
+      "type": "component",
+      "component": "quiz.option",
+      "repeatable": true
+    },
+    "correctOptionKey": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "config": {}
+}
