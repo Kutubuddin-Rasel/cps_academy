@@ -451,7 +451,7 @@ export interface ApiBlogPostBlogPost extends Struct.CollectionTypeSchema {
     singularName: 'blog-post';
   };
   options: {
-    draftAndPublish: false;
+    draftAndPublish: true;
   };
   attributes: {
     author: Schema.Attribute.Relation<
@@ -486,7 +486,7 @@ export interface ApiCourseCourse extends Struct.CollectionTypeSchema {
     singularName: 'course';
   };
   options: {
-    draftAndPublish: true;
+    draftAndPublish: false;
   };
   attributes: {
     createdAt: Schema.Attribute.DateTime;
