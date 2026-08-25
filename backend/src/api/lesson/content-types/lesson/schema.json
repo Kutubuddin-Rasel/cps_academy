@@ -16,7 +16,7 @@
       "required": true
     },
     "videoUrl": {
-      "type": "text"
+      "type": "string"
     },
     "content": {
       "type": "text"

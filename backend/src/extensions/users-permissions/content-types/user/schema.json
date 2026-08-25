@@ -83,6 +83,18 @@
       "relation": "oneToMany",
       "target": "api::lesson-progress.lesson-progress",
       "mappedBy": "student"
+    },
+    "quizAttempts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz-attempt.quiz-attempt",
+      "mappedBy": "student"
+    },
+    "blogPosts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::blog-post.blog-post",
+      "mappedBy": "author"
     }
   }
 }

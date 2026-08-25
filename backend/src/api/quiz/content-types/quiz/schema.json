@@ -27,6 +27,12 @@
       "target": "api::course.course",
       "required": true,
       "inversedBy": "quizzes"
+    },
+    "quizAttempts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz-attempt.quiz-attempt",
+      "mappedBy": "quiz"
     }
   }
 }

@@ -48,6 +48,12 @@
       "relation": "oneToMany",
       "target": "api::lesson-progress.lesson-progress",
       "mappedBy": "course"
+    },
+    "quizAttempts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::quiz-attempt.quiz-attempt",
+      "mappedBy": "course"
     }
   }
 }
