@@ -1,5 +1,6 @@
 import { factories } from "@strapi/strapi";
 import { errors } from "@strapi/utils";
+import type { Knex } from "knex";
 import {
   getAuthenticatedLmsUser,
   isUnknownRecord,
@@ -58,6 +59,31 @@ function getQuizDocumentId(params: unknown): string {
   return params.id;
 }
 
+function getCreateCourseDocumentId(value: unknown): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ValidationError(
+      "Quiz course must be a valid Course documentId.",
+    );
+  }
+
+  return value;
+}
+
+async function lockCourseForKeyShare(
+  transaction: Knex.Transaction,
+  documentId: string,
+): Promise<void> {
+  const course: unknown = await transaction("courses")
+    .select("id")
+    .where({ document_id: documentId })
+    .forKeyShare()
+    .first();
+
+  if (!isUnknownRecord(course)) {
+    throw new ValidationError("Selected Course was not found.");
+  }
+}
+
 export default factories.createCoreController(QUIZ_UID, ({ strapi }) => ({
   async create(ctx) {
     const user = getAuthenticatedLmsUser(ctx.state.user);
@@ -71,23 +97,35 @@ export default factories.createCoreController(QUIZ_UID, ({ strapi }) => ({
     }
 
     const requestData = getRequestData(ctx.request.body);
-    const courseDocumentId =
-      user.roleName === LMS_ROLES.INSTRUCTOR
-        ? await getOwnedQuizCourseDocumentId(
-            strapi,
-            requestData.course,
-            user.id,
-          )
-        : await getValidQuizCourseDocumentId(strapi, requestData.course);
-    const data = getWritableQuizData(requestData);
+    const requestedCourseDocumentId = getCreateCourseDocumentId(
+      requestData.course,
+    );
+    const quiz = await strapi.db.transaction(
+      async ({ trx }: { trx: Knex.Transaction }) => {
+        await lockCourseForKeyShare(trx, requestedCourseDocumentId);
 
-    if (!hasOwnField(data, "questions")) {
-      throw new ValidationError("Quiz must contain at least one Question.");
-    }
+        const courseDocumentId =
+          user.roleName === LMS_ROLES.INSTRUCTOR
+            ? await getOwnedQuizCourseDocumentId(
+                strapi,
+                requestedCourseDocumentId,
+                user.id,
+              )
+            : await getValidQuizCourseDocumentId(
+                strapi,
+                requestedCourseDocumentId,
+              );
+        const data = getWritableQuizData(requestData);
 
-    data.course = { documentId: courseDocumentId };
+        if (!hasOwnField(data, "questions")) {
+          throw new ValidationError("Quiz must contain at least one Question.");
+        }
 
-    const quiz = await strapi.service(QUIZ_UID).create({ data });
+        data.course = { documentId: courseDocumentId };
+
+        return strapi.service(QUIZ_UID).create({ data });
+      },
+    );
 
     if (!this.sanitizeOutput || !this.transformResponse) {
       throw new Error("Quiz controller response helpers are unavailable");

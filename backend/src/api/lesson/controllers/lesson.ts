@@ -1,5 +1,6 @@
 import { factories } from "@strapi/strapi";
 import { errors } from "@strapi/utils";
+import type { Knex } from "knex";
 import {
   getAuthenticatedLmsUser,
   isUnknownRecord,
@@ -65,6 +66,31 @@ function getLessonDocumentId(params: unknown): string {
   return params.id;
 }
 
+function getCreateCourseDocumentId(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new ValidationError(
+      "Lesson course must be a valid Course documentId.",
+    );
+  }
+
+  return value;
+}
+
+async function lockCourseForKeyShare(
+  transaction: Knex.Transaction,
+  documentId: string,
+): Promise<void> {
+  const course: unknown = await transaction("courses")
+    .select("id")
+    .where({ document_id: documentId })
+    .forKeyShare()
+    .first();
+
+  if (!isUnknownRecord(course)) {
+    throw new ValidationError("Selected Course was not found.");
+  }
+}
+
 export default factories.createCoreController(
   LESSON_UID,
   ({ strapi }) => ({
@@ -80,22 +106,31 @@ export default factories.createCoreController(
       }
 
       const requestData = getRequestData(ctx.request.body);
-      const courseDocumentId =
-        user.roleName === LMS_ROLES.INSTRUCTOR
-          ? await getOwnedLessonCourseDocumentId(
-              strapi,
-              requestData.course,
-              user.id,
-            )
-          : await getValidLessonCourseDocumentId(
-              strapi,
-              requestData.course,
-            );
-      const data = getWritableLessonData(requestData);
+      const requestedCourseDocumentId = getCreateCourseDocumentId(
+        requestData.course,
+      );
+      const lesson = await strapi.db.transaction(
+        async ({ trx }: { trx: Knex.Transaction }) => {
+          await lockCourseForKeyShare(trx, requestedCourseDocumentId);
 
-      data.course = { documentId: courseDocumentId };
+          const courseDocumentId =
+            user.roleName === LMS_ROLES.INSTRUCTOR
+              ? await getOwnedLessonCourseDocumentId(
+                  strapi,
+                  requestedCourseDocumentId,
+                  user.id,
+                )
+              : await getValidLessonCourseDocumentId(
+                  strapi,
+                  requestedCourseDocumentId,
+                );
+          const data = getWritableLessonData(requestData);
 
-      const lesson = await strapi.service(LESSON_UID).create({ data });
+          data.course = { documentId: courseDocumentId };
+
+          return strapi.service(LESSON_UID).create({ data });
+        },
+      );
 
       if (!this.sanitizeOutput || !this.transformResponse) {
         throw new Error("Lesson controller response helpers are unavailable");
