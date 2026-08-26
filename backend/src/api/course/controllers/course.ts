@@ -1,5 +1,7 @@
+import type { Core } from "@strapi/strapi";
 import { factories } from "@strapi/strapi";
 import { errors } from "@strapi/utils";
+import type { Knex } from "knex";
 import {
   getAuthenticatedLmsUser,
   isUnknownRecord,
@@ -9,6 +11,11 @@ import { getValidInstructorId } from "../utils/instructor";
 
 const { ForbiddenError, NotFoundError, ValidationError } = errors;
 const COURSE_UID = "api::course.course";
+const ENROLLMENT_UID = "api::enrollment.enrollment";
+const LESSON_PROGRESS_UID = "api::lesson-progress.lesson-progress";
+const LESSON_UID = "api::lesson.lesson";
+const QUIZ_ATTEMPT_UID = "api::quiz-attempt.quiz-attempt";
+const QUIZ_UID = "api::quiz.quiz";
 
 function canManageAllCourses(roleName: string): boolean {
   return roleName === LMS_ROLES.ADMIN || roleName === LMS_ROLES.CONTENT_MANAGER;
@@ -52,6 +59,69 @@ function getCourseDocumentId(params: unknown): string {
   }
 
   return params.id;
+}
+
+async function lockCourseForUpdate(
+  transaction: Knex.Transaction,
+  documentId: string,
+): Promise<boolean> {
+  const course: unknown = await transaction("courses")
+    .select("id")
+    .where({ document_id: documentId })
+    .forUpdate()
+    .first();
+
+  return isUnknownRecord(course);
+}
+
+async function courseHasDependents(
+  strapi: Core.Strapi,
+  documentId: string,
+): Promise<boolean> {
+  const lesson = await strapi.documents(LESSON_UID).findFirst({
+    filters: { course: { documentId } },
+    fields: ["documentId"],
+  });
+
+  if (lesson) {
+    return true;
+  }
+
+  const quiz = await strapi.documents(QUIZ_UID).findFirst({
+    filters: { course: { documentId } },
+    fields: ["documentId"],
+  });
+
+  if (quiz) {
+    return true;
+  }
+
+  const enrollment = await strapi.documents(ENROLLMENT_UID).findFirst({
+    filters: { course: { documentId } },
+    fields: ["documentId"],
+  });
+
+  if (enrollment) {
+    return true;
+  }
+
+  const lessonProgress = await strapi
+    .documents(LESSON_PROGRESS_UID)
+    .findFirst({
+      filters: { course: { documentId } },
+      fields: ["documentId"],
+    });
+
+  if (lessonProgress) {
+    return true;
+  }
+
+  const quizAttempt = await strapi.documents(QUIZ_ATTEMPT_UID).findFirst({
+    filters: { course: { documentId } },
+    fields: ["documentId"],
+  });
+
+  return Boolean(quizAttempt);
 }
 
 export default factories.createCoreController(
@@ -133,6 +203,29 @@ export default factories.createCoreController(
       const sanitizedCourse = await this.sanitizeOutput(course, ctx);
 
       return this.transformResponse(sanitizedCourse);
+    },
+
+    async delete(ctx) {
+      const documentId = getCourseDocumentId(ctx.params);
+
+      await strapi.db.transaction(
+        async ({ trx }: { trx: Knex.Transaction }) => {
+          const courseExists = await lockCourseForUpdate(trx, documentId);
+
+          if (!courseExists) {
+            throw new NotFoundError("Course not found");
+          }
+
+          if (await courseHasDependents(strapi, documentId)) {
+            ctx.conflict(
+              "Course cannot be deleted because dependent records exist.",
+            );
+            return;
+          }
+
+          await super.delete(ctx);
+        },
+      );
     },
   }),
 );
