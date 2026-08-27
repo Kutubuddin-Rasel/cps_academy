@@ -21,5 +21,10 @@ export default {
       path: "/lessons/:lessonDocumentId/learn",
       handler: "lesson-progress.learnLesson",
     },
+    {
+      method: "GET",
+      path: "/courses/:courseDocumentId/students-progress",
+      handler: "lesson-progress.staffCourseProgress",
+    },
   ],
 };

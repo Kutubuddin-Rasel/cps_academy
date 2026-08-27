@@ -410,4 +410,89 @@ export default factories.createCoreController(PROGRESS_UID, ({ strapi }) => ({
 
     return { data: { lesson: { ...lesson, completed: result.completed } } };
   },
+
+  async staffCourseProgress(ctx) {
+    const user = getAuthenticatedLmsUser(ctx.state.user);
+
+    if (!user) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    if (
+      user.roleName !== LMS_ROLES.ADMIN &&
+      user.roleName !== LMS_ROLES.CONTENT_MANAGER &&
+      user.roleName !== LMS_ROLES.INSTRUCTOR
+    ) {
+      throw new ForbiddenError("Only staff may view Course student progress.");
+    }
+
+    const documentId = getCourseDocumentId(ctx.params);
+    const course = await strapi.documents(COURSE_UID).findOne({
+      documentId,
+      fields: ["documentId"],
+      populate: { instructor: { fields: ["id"] } },
+    });
+
+    if (!course) {
+      throw new NotFoundError("Course not found.");
+    }
+
+    if (
+      user.roleName === LMS_ROLES.INSTRUCTOR &&
+      course.instructor?.id !== user.id
+    ) {
+      throw new ForbiddenError("You can only view progress for your own Courses.");
+    }
+
+    const enrollments = await strapi
+      .documents("api::enrollment.enrollment")
+      .findMany({
+        filters: {
+          course: { documentId: course.documentId },
+          student: { role: { name: LMS_ROLES.STUDENT } },
+        },
+        fields: ["documentId"],
+        populate: { student: { fields: ["id", "username"] } },
+        sort: "id:asc",
+      });
+    // Sanitize identities directly: no generic User relation-read permission is needed.
+    const identities = await strapi.contentAPI.sanitize.output(
+      enrollments.flatMap((enrollment) =>
+        enrollment.student ? [enrollment.student] : [],
+      ),
+      strapi.contentType("plugin::users-permissions.user"),
+      { auth: ctx.state.auth },
+    );
+
+    if (!Array.isArray(identities)) {
+      throw new Error("Student sanitization returned an invalid collection.");
+    }
+
+    const seenStudents = new Set<Data.ID>();
+    const students = [];
+
+    for (const identity of identities) {
+      if (
+        !isUnknownRecord(identity) ||
+        (typeof identity.id !== "number" && typeof identity.id !== "string") ||
+        typeof identity.username !== "string" ||
+        seenStudents.has(identity.id)
+      ) {
+        continue;
+      }
+
+      seenStudents.add(identity.id);
+      const state = await getCourseCompletionState(
+        strapi,
+        identity.id,
+        course.documentId,
+      );
+      students.push({
+        student: { id: identity.id, username: identity.username },
+        ...calculateProgress(state.totalLessons, state.completedLessonIds.size),
+      });
+    }
+
+    return { data: { course: { documentId: course.documentId }, students } };
+  },
 }));
