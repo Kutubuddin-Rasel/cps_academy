@@ -1,3 +1,4 @@
+import type { Core, Data } from "@strapi/strapi";
 import { factories } from "@strapi/strapi";
 import { errors } from "@strapi/utils";
 import type { Knex } from "knex";
@@ -13,6 +14,9 @@ import {
 
 const { ForbiddenError, NotFoundError, ValidationError } = errors;
 const LESSON_UID = "api::lesson.lesson";
+const LESSON_PROGRESS_UID = "api::lesson-progress.lesson-progress";
+const DUPLICATE_ORDER_MESSAGE =
+  "A Lesson with this order already exists in the Course.";
 
 function canManageAllLessons(roleName: string): boolean {
   return roleName === LMS_ROLES.ADMIN || roleName === LMS_ROLES.CONTENT_MANAGER;
@@ -76,18 +80,78 @@ function getCreateCourseDocumentId(value: unknown): string {
   return value;
 }
 
-async function lockCourseForKeyShare(
+function getPositiveLessonOrder(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+    throw new ValidationError(
+      "Lesson order must be an integer greater than or equal to 1.",
+    );
+  }
+
+  return value;
+}
+
+async function getExistingLessonCourseDocumentId(
+  strapi: Core.Strapi,
+  documentId: string,
+): Promise<string> {
+  const lesson = await strapi.documents(LESSON_UID).findOne({
+    documentId,
+    fields: ["documentId"],
+    populate: { course: { fields: ["documentId"] } },
+  });
+
+  if (!lesson || !lesson.course) {
+    throw new NotFoundError("Lesson not found");
+  }
+
+  return lesson.course.documentId;
+}
+
+async function lessonOrderExists(
+  strapi: Core.Strapi,
+  courseDocumentId: string,
+  order: number,
+  excludeDocumentId?: string,
+): Promise<boolean> {
+  const lesson = await strapi.documents(LESSON_UID).findFirst({
+    filters: {
+      course: { documentId: courseDocumentId },
+      order,
+      ...(excludeDocumentId ? { documentId: { $ne: excludeDocumentId } } : {}),
+    },
+    fields: ["documentId"],
+  });
+
+  return Boolean(lesson);
+}
+
+async function lockCourseForNoKeyUpdate(
   transaction: Knex.Transaction,
   documentId: string,
 ): Promise<void> {
   const course: unknown = await transaction("courses")
     .select("id")
     .where({ document_id: documentId })
-    .forKeyShare()
+    .forNoKeyUpdate()
     .first();
 
   if (!isUnknownRecord(course)) {
     throw new ValidationError("Selected Course was not found.");
+  }
+}
+
+async function lockLessonForUpdate(
+  transaction: Knex.Transaction,
+  documentId: string,
+): Promise<void> {
+  const lesson: unknown = await transaction("lessons")
+    .select("id")
+    .where({ document_id: documentId })
+    .forUpdate()
+    .first();
+
+  if (!isUnknownRecord(lesson)) {
+    throw new NotFoundError("Lesson not found");
   }
 }
 
@@ -109,9 +173,10 @@ export default factories.createCoreController(
       const requestedCourseDocumentId = getCreateCourseDocumentId(
         requestData.course,
       );
+      const order = getPositiveLessonOrder(requestData.order);
       const lesson = await strapi.db.transaction(
         async ({ trx }: { trx: Knex.Transaction }) => {
-          await lockCourseForKeyShare(trx, requestedCourseDocumentId);
+          await lockCourseForNoKeyUpdate(trx, requestedCourseDocumentId);
 
           const courseDocumentId =
             user.roleName === LMS_ROLES.INSTRUCTOR
@@ -124,8 +189,14 @@ export default factories.createCoreController(
                   strapi,
                   requestedCourseDocumentId,
                 );
+
+          if (await lessonOrderExists(strapi, courseDocumentId, order)) {
+            ctx.throw(409, DUPLICATE_ORDER_MESSAGE);
+          }
+
           const data = getWritableLessonData(requestData);
 
+          data.order = order;
           data.course = { documentId: courseDocumentId };
 
           return strapi.service(LESSON_UID).create({ data });
@@ -162,12 +233,42 @@ export default factories.createCoreController(
         );
       }
 
+      const order = hasOwnField(requestData, "order")
+        ? getPositiveLessonOrder(requestData.order)
+        : undefined;
+      const documentId = getLessonDocumentId(ctx.params);
       const data = getWritableLessonData(requestData);
+      let lesson: Data.ContentType<typeof LESSON_UID> | null;
 
-      const lesson = await strapi.documents(LESSON_UID).update({
-        documentId: getLessonDocumentId(ctx.params),
-        data,
-      });
+      if (order === undefined) {
+        lesson = await strapi.documents(LESSON_UID).update({ documentId, data });
+      } else {
+        const courseDocumentId = await getExistingLessonCourseDocumentId(
+          strapi,
+          documentId,
+        );
+
+        lesson = await strapi.db.transaction(
+          async ({ trx }: { trx: Knex.Transaction }) => {
+            await lockCourseForNoKeyUpdate(trx, courseDocumentId);
+
+            if (
+              (await getExistingLessonCourseDocumentId(strapi, documentId)) !==
+              courseDocumentId
+            ) {
+              throw new NotFoundError("Lesson not found");
+            }
+
+            if (
+              await lessonOrderExists(strapi, courseDocumentId, order, documentId)
+            ) {
+              ctx.throw(409, DUPLICATE_ORDER_MESSAGE);
+            }
+
+            return strapi.documents(LESSON_UID).update({ documentId, data });
+          },
+        );
+      }
 
       if (!this.sanitizeOutput || !this.transformResponse) {
         throw new Error("Lesson controller response helpers are unavailable");
@@ -176,6 +277,43 @@ export default factories.createCoreController(
       const sanitizedLesson = await this.sanitizeOutput(lesson, ctx);
 
       return this.transformResponse(sanitizedLesson);
+    },
+
+    async delete(ctx) {
+      const documentId = getLessonDocumentId(ctx.params);
+      const courseDocumentId = await getExistingLessonCourseDocumentId(
+        strapi,
+        documentId,
+      );
+
+      await strapi.db.transaction(
+        async ({ trx }: { trx: Knex.Transaction }) => {
+          await lockCourseForNoKeyUpdate(trx, courseDocumentId);
+
+          if (
+            (await getExistingLessonCourseDocumentId(strapi, documentId)) !==
+            courseDocumentId
+          ) {
+            throw new NotFoundError("Lesson not found");
+          }
+
+          await lockLessonForUpdate(trx, documentId);
+
+          const progress = await strapi.documents(LESSON_PROGRESS_UID).findFirst({
+            filters: { lesson: { documentId } },
+            fields: ["documentId"],
+          });
+
+          if (progress) {
+            ctx.throw(
+              409,
+              "Lesson cannot be deleted because progress records exist.",
+            );
+          }
+
+          await super.delete(ctx);
+        },
+      );
     },
   }),
 );
