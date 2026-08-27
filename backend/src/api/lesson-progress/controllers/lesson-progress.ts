@@ -147,6 +147,25 @@ async function lockLessonForKeyShare(
   }
 }
 
+function getLearningLessonData(value: unknown) {
+  if (
+    !isUnknownRecord(value) ||
+    typeof value.documentId !== "string" ||
+    typeof value.title !== "string" ||
+    typeof value.order !== "number"
+  ) {
+    throw new NotFoundError("Lesson not found.");
+  }
+
+  return {
+    documentId: value.documentId,
+    title: value.title,
+    content: typeof value.content === "string" ? value.content : null,
+    videoUrl: typeof value.videoUrl === "string" ? value.videoUrl : null,
+    order: value.order,
+  };
+}
+
 export default factories.createCoreController(PROGRESS_UID, ({ strapi }) => ({
   async complete(ctx) {
     const user = getStudentUser(ctx.state.user);
@@ -276,5 +295,119 @@ export default factories.createCoreController(PROGRESS_UID, ({ strapi }) => ({
     }
 
     return { data: { course: { documentId: course.documentId }, ...progress } };
+  },
+
+  async courseLessons(ctx) {
+    const user = getStudentUser(ctx.state.user);
+    const documentId = getCourseDocumentId(ctx.params);
+    const result = await strapi.db.transaction(
+      async ({ trx }: { trx: Knex.Transaction }) => {
+        await lockStudentForShare(trx, user.id);
+        await lockCourseForShare(trx, documentId);
+        await requireCourseEnrollment(strapi, user.id, documentId);
+
+        const state = await getCourseCompletionState(strapi, user.id, documentId);
+        const lessons = await strapi.documents(LESSON_UID).findMany({
+          filters: { course: { documentId } },
+          fields: ["documentId", "title", "content", "videoUrl", "order"],
+          sort: "order:asc",
+        });
+
+        return { lessons, state };
+      },
+    );
+
+    const sanitized = await strapi.contentAPI.sanitize.output(
+      result.lessons,
+      strapi.contentType(LESSON_UID),
+      { auth: ctx.state.auth },
+    );
+
+    if (!Array.isArray(sanitized)) {
+      throw new Error("Lesson sanitization returned an invalid collection.");
+    }
+
+    const lessons = sanitized.map((entry: unknown) => {
+      const lesson = getLearningLessonData(entry);
+      const locked = result.state.lessons.some(
+        (previous) =>
+          previous.order < lesson.order &&
+          !result.state.completedLessonIds.has(previous.documentId),
+      );
+
+      return {
+        documentId: lesson.documentId,
+        title: lesson.title,
+        order: lesson.order,
+        completed: result.state.completedLessonIds.has(lesson.documentId),
+        locked,
+        content: locked ? null : lesson.content,
+        videoUrl: locked ? null : lesson.videoUrl,
+      };
+    });
+
+    return { data: { lessons } };
+  },
+
+  async learnLesson(ctx) {
+    const user = getStudentUser(ctx.state.user);
+    const documentId = getLessonDocumentId(ctx.params);
+    const result = await strapi.db.transaction(
+      async ({ trx }: { trx: Knex.Transaction }) => {
+        await lockStudentForShare(trx, user.id);
+        const initialLesson = await getCompletionLesson(strapi, documentId);
+        await lockCourseForShare(trx, initialLesson.courseDocumentId);
+
+        const lesson = await getCompletionLesson(strapi, documentId);
+
+        if (lesson.courseDocumentId !== initialLesson.courseDocumentId) {
+          throw new NotFoundError("Lesson not found.");
+        }
+
+        await requireCourseEnrollment(strapi, user.id, lesson.courseDocumentId);
+        const state = await getCourseCompletionState(
+          strapi,
+          user.id,
+          lesson.courseDocumentId,
+        );
+        const missingPrerequisite = state.lessons.some(
+          (previous) =>
+            previous.order < lesson.order &&
+            !state.completedLessonIds.has(previous.documentId),
+        );
+
+        if (missingPrerequisite) {
+          ctx.conflict("Complete previous lessons first.");
+          return;
+        }
+
+        const entry = await strapi.documents(LESSON_UID).findOne({
+          documentId,
+          fields: ["documentId", "title", "content", "videoUrl", "order"],
+        });
+
+        if (!entry) {
+          throw new NotFoundError("Lesson not found.");
+        }
+
+        return {
+          lesson: entry,
+          completed: state.completedLessonIds.has(documentId),
+        };
+      },
+    );
+
+    if (!result) {
+      return;
+    }
+
+    const sanitized = await strapi.contentAPI.sanitize.output(
+      result.lesson,
+      strapi.contentType(LESSON_UID),
+      { auth: ctx.state.auth },
+    );
+    const lesson = getLearningLessonData(sanitized);
+
+    return { data: { lesson: { ...lesson, completed: result.completed } } };
   },
 }));

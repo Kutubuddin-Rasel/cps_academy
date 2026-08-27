@@ -11,5 +11,15 @@ export default {
       path: "/courses/:courseDocumentId/progress",
       handler: "lesson-progress.courseProgress",
     },
+    {
+      method: "GET",
+      path: "/courses/:courseDocumentId/lessons",
+      handler: "lesson-progress.courseLessons",
+    },
+    {
+      method: "GET",
+      path: "/lessons/:lessonDocumentId/learn",
+      handler: "lesson-progress.learnLesson",
+    },
   ],
 };
