@@ -3,7 +3,13 @@ import type { Core } from '@strapi/strapi';
 import { isDatabaseClientKind } from '@strapi/database';
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Database => {
-  const client = env('DATABASE_CLIENT', 'sqlite');
+  const rawClient = env('DATABASE_CLIENT');
+  const dbUrl = env('DATABASE_URL');
+  const client = rawClient || (dbUrl?.startsWith('postgres') ? 'postgres' : 'sqlite');
+
+  if (env('NODE_ENV') === 'production' && client !== 'postgres') {
+    throw new Error('Production deployment requires PostgreSQL. Set DATABASE_CLIENT=postgres or provide a Postgres DATABASE_URL.');
+  }
 
   if (!isDatabaseClientKind(client)) {
     throw new Error(

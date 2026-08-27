@@ -24,15 +24,12 @@ lerna-debug.log*
 .pnp.js
 
 # Env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
 
 # IDEs and Editors
 .vscode/
 .idea/
+.agents/
 *.suo
 *.ntvs*
 *.njsproj
@@ -50,3 +47,6 @@ Junior Software Engineer — Project Round.md
 backend/database/migrations/.gitkeep
 backend/public/uploads/.gitkeep
 docs/
+skills-lock.json
+backend/.env.example
+backend/.env.example

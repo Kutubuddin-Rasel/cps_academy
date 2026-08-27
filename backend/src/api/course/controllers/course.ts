@@ -227,5 +227,90 @@ export default factories.createCoreController(
         },
       );
     },
+
+    async manageContent(ctx) {
+      const user = getAuthenticatedLmsUser(ctx.state.user);
+      if (!user) {
+        throw new ForbiddenError("Authentication required.");
+      }
+
+      const { courseDocumentId } = ctx.params;
+      if (!courseDocumentId) {
+        throw new ValidationError("Missing courseDocumentId");
+      }
+
+      if (
+        user.roleName !== LMS_ROLES.ADMIN &&
+        user.roleName !== LMS_ROLES.CONTENT_MANAGER &&
+        user.roleName !== LMS_ROLES.INSTRUCTOR
+      ) {
+        throw new ForbiddenError("Access denied.");
+      }
+
+      const course = await strapi.documents(COURSE_UID).findFirst({
+        filters: { documentId: courseDocumentId },
+        fields: ["documentId", "title"],
+        populate: { instructor: { fields: ["id"] } }
+      });
+
+      if (!course) {
+        throw new NotFoundError("Course not found");
+      }
+
+      if (user.roleName === LMS_ROLES.INSTRUCTOR && course.instructor?.id !== user.id) {
+        throw new ForbiddenError("You can only manage your own courses.");
+      }
+
+      const lessons = await strapi.documents(LESSON_UID).findMany({
+        filters: { course: { documentId: courseDocumentId } },
+        fields: ["documentId", "title", "content", "videoUrl", "order"],
+        sort: ["order:asc", "id:asc"],
+      });
+
+      const quizzes = await strapi.documents(QUIZ_UID).findMany({
+        filters: { course: { documentId: courseDocumentId } },
+        fields: ["documentId", "title"],
+        populate: {
+          questions: {
+            fields: ["questionKey", "prompt", "correctOptionKey"],
+            populate: {
+              options: {
+                fields: ["optionKey", "text"]
+              }
+            }
+          }
+        },
+        sort: ["id:asc"]
+      });
+
+      ctx.body = {
+        data: {
+          course: {
+            documentId: course.documentId,
+            title: course.title
+          },
+          lessons: lessons.map((l: { documentId: string; title?: string | null; content?: string | null; videoUrl?: string | null; order?: number | null }) => ({
+            documentId: l.documentId,
+            title: l.title,
+            content: l.content,
+            videoUrl: l.videoUrl,
+            order: l.order
+          })),
+          quizzes: quizzes.map((q: { documentId: string; title?: string | null; questions?: { questionKey?: string | null; prompt?: string | null; correctOptionKey?: string | null; options?: { optionKey?: string | null; text?: string | null }[] | null }[] | null }) => ({
+            documentId: q.documentId,
+            title: q.title,
+            questions: (q.questions || []).map((question) => ({
+              questionKey: question.questionKey,
+              prompt: question.prompt,
+              correctOptionKey: question.correctOptionKey,
+              options: (question.options || []).map((opt) => ({
+                optionKey: opt.optionKey,
+                text: opt.text
+              }))
+            }))
+          }))
+        }
+      };
+    },
   }),
 );

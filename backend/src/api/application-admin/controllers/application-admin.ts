@@ -39,7 +39,7 @@ function isLmsRole(value: unknown): value is LmsRole {
   );
 }
 
-function getRequestedRole(body: unknown): LmsRole {
+function getRequestedRole(body: unknown): LmsRole | null {
   if (
     !isUnknownRecord(body) ||
     Object.keys(body).length !== 1 ||
@@ -49,14 +49,12 @@ function getRequestedRole(body: unknown): LmsRole {
   }
 
   if (body.role === null) {
-    throw new ValidationError(
-      "Removing a Users & Permissions role is not supported. Assign another LMS role instead.",
-    );
+    return null;
   }
 
   if (!isLmsRole(body.role)) {
     throw new ValidationError(
-      "Role must be Admin, Content Manager, Instructor, or Student.",
+      "Role must be Admin, Content Manager, Instructor, Student, or null.",
     );
   }
 
@@ -79,11 +77,12 @@ function getUserId(value: unknown): number {
 }
 
 function userResponse(user: ManagedUser) {
+  const roleName = user.role?.name;
   return {
     id: user.id,
     username: user.username,
     email: user.email,
-    role: user.role?.name ?? null,
+    role: isLmsRole(roleName) ? roleName : null,
   };
 }
 
@@ -103,19 +102,26 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   async changeRole(ctx: Context) {
     requireAdmin(ctx);
 
-    const roleName = getRequestedRole(ctx.request.body);
+    const requestedRole = getRequestedRole(ctx.request.body);
     const userId = getUserId(ctx.params.userId);
     const user = await strapi.documents(USER_UID).findFirst({
       filters: { id: userId },
       fields: ["username", "email"],
-      populate: { role: { fields: ["name"] } },
+      populate: { role: { fields: ["name", "type"] } },
     });
 
     if (!user) {
       throw new NotFoundError("Application user not found.");
     }
 
-    if (user.role?.name === roleName) {
+    const currentRoleName = user.role?.name;
+    const currentRoleType = user.role?.type;
+    if (requestedRole === null) {
+      if (currentRoleType === "authenticated") {
+        ctx.body = { data: { user: userResponse(user) } };
+        return;
+      }
+    } else if (currentRoleName === requestedRole) {
       ctx.body = { data: { user: userResponse(user) } };
       return;
     }
@@ -133,10 +139,25 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       }
     }
 
-    const role = await strapi.documents(ROLE_UID).findFirst({
-      filters: { name: roleName },
-      fields: ["name"],
-    });
+    if (user.role?.name === LMS_ROLES.ADMIN && requestedRole !== LMS_ROLES.ADMIN) {
+      const adminCount = await strapi.documents(USER_UID).count({
+        filters: { role: { name: LMS_ROLES.ADMIN } },
+      });
+
+      if (adminCount <= 1) {
+        return ctx.conflict("Cannot remove the last Admin application user.");
+      }
+    }
+
+    const role = requestedRole === null
+      ? await strapi.documents(ROLE_UID).findFirst({
+          filters: { type: "authenticated" },
+          fields: ["name"],
+        })
+      : await strapi.documents(ROLE_UID).findFirst({
+          filters: { name: requestedRole },
+          fields: ["name"],
+        });
 
     if (!role) {
       throw new ValidationError("The requested LMS role is not configured.");
@@ -146,7 +167,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       documentId: user.documentId,
       data: { role: role.id },
       fields: ["username", "email"],
-      populate: { role: { fields: ["name"] } },
+      populate: { role: { fields: ["name", "type"] } },
     });
 
     if (!updatedUser) {
@@ -167,12 +188,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       strapi.documents("api::course.course").count({}),
       strapi.documents("api::enrollment.enrollment").count({}),
     ]);
-    const byRole = { Admin: 0, "Content Manager": 0, Instructor: 0, Student: 0 };
+    const byRole = { Admin: 0, "Content Manager": 0, Instructor: 0, Student: 0, Unassigned: 0 };
 
     for (const user of users) {
       const roleName = user.role?.name;
       if (isLmsRole(roleName)) {
         byRole[roleName] += 1;
+      } else {
+        byRole.Unassigned += 1;
       }
     }
 

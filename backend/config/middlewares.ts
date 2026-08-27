@@ -4,7 +4,12 @@ const config: Core.Config.Middlewares = [
   'strapi::logger',
   'strapi::errors',
   'strapi::security',
-  'strapi::cors',
+  {
+    name: 'strapi::cors',
+    config: {
+      origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ['*'],
+    },
+  },
   'strapi::poweredBy',
   'strapi::query',
   'strapi::body',

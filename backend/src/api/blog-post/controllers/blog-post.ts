@@ -115,6 +115,31 @@ function postResponse(post: BlogPost) {
   };
 }
 
+async function requireBlogOwner(
+  strapi: Core.Strapi,
+  user: NonNullable<ReturnType<typeof requireBlogWriter>>,
+  documentId: string,
+) {
+  if (user.roleName === LMS_ROLES.ADMIN) {
+    return;
+  }
+
+  const post = await strapi.documents(BLOG_UID).findOne({
+    documentId,
+    status: "draft",
+    fields: ["documentId"],
+    populate: { author: { fields: ["id"] } },
+  });
+
+  if (!post) {
+    throw new NotFoundError("Blog post not found.");
+  }
+
+  if (post.author?.id !== user.id) {
+    throw new ForbiddenError("Content Managers can only manage their own Blog posts.");
+  }
+}
+
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   async create(ctx: Context) {
     const user = requireBlogWriter(ctx);
@@ -131,9 +156,11 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   },
 
   async update(ctx: Context) {
-    requireBlogWriter(ctx);
+    const user = requireBlogWriter(ctx);
     const data = getWritableData(ctx.request.body, false);
     const documentId = getDocumentId(ctx.params.id);
+    await requireBlogOwner(strapi, user, documentId);
+
     const existing = await strapi.documents(BLOG_UID).findOne({
       documentId,
       status: "draft",
@@ -157,10 +184,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   },
 
   async delete(ctx: Context) {
-    requireBlogWriter(ctx);
+    const user = requireBlogWriter(ctx);
     requireEmptyBody(ctx.request.body);
+    const documentId = getDocumentId(ctx.params.id);
+    await requireBlogOwner(strapi, user, documentId);
+
     const result = await strapi.documents(BLOG_UID).delete({
-      documentId: getDocumentId(ctx.params.id),
+      documentId,
     });
     if (result.entries.length === 0) {
       throw new NotFoundError("Blog post not found.");
@@ -170,10 +200,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   },
 
   async publish(ctx: Context) {
-    requireBlogWriter(ctx);
+    const user = requireBlogWriter(ctx);
     requireEmptyBody(ctx.request.body);
+    const documentId = getDocumentId(ctx.params.documentId);
+    await requireBlogOwner(strapi, user, documentId);
+
     const result = await strapi.documents(BLOG_UID).publish({
-      documentId: getDocumentId(ctx.params.documentId),
+      documentId,
     });
     const post = result.entries[0];
     if (!post) {
@@ -184,9 +217,11 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   },
 
   async unpublish(ctx: Context) {
-    requireBlogWriter(ctx);
+    const user = requireBlogWriter(ctx);
     requireEmptyBody(ctx.request.body);
     const documentId = getDocumentId(ctx.params.documentId);
+    await requireBlogOwner(strapi, user, documentId);
+
     const draft = await strapi.documents(BLOG_UID).findOne({
       documentId,
       status: "draft",
@@ -224,10 +259,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   },
 
   async manage(ctx: Context) {
-    requireBlogWriter(ctx);
+    const user = requireBlogWriter(ctx);
+    const filters = user.roleName === LMS_ROLES.CONTENT_MANAGER ? { author: { id: user.id } } : {};
+
     const [drafts, published] = await Promise.all([
-      strapi.documents(BLOG_UID).findMany({ status: "draft", fields: POST_FIELDS }),
-      strapi.documents(BLOG_UID).findMany({ status: "published", fields: POST_FIELDS }),
+      strapi.documents(BLOG_UID).findMany({ filters, status: "draft", fields: POST_FIELDS }),
+      strapi.documents(BLOG_UID).findMany({ filters, status: "published", fields: POST_FIELDS }),
     ]);
     const publishedById = new Map(published.map((post) => [post.documentId, post]));
     // One editable row per document, with the state of its live version.
