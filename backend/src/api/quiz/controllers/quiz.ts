@@ -14,6 +14,7 @@ import { validateQuizQuestions } from "../utils/questions";
 
 const { ForbiddenError, NotFoundError, ValidationError } = errors;
 const QUIZ_UID = "api::quiz.quiz";
+const QUIZ_ATTEMPT_UID = "api::quiz-attempt.quiz-attempt";
 
 function canManageAllQuizzes(roleName: string): boolean {
   return roleName === LMS_ROLES.ADMIN || roleName === LMS_ROLES.CONTENT_MANAGER;
@@ -169,5 +170,35 @@ export default factories.createCoreController(QUIZ_UID, ({ strapi }) => ({
     const sanitizedQuiz = await this.sanitizeOutput(quiz, ctx);
 
     return this.transformResponse(sanitizedQuiz);
+  },
+
+  async delete(ctx) {
+    const documentId = getQuizDocumentId(ctx.params);
+
+    await strapi.db.transaction(
+      async ({ trx }: { trx: Knex.Transaction }) => {
+        const quiz: unknown = await trx("quizzes")
+          .select("id")
+          .where({ document_id: documentId })
+          .forUpdate()
+          .first();
+
+        if (!isUnknownRecord(quiz)) {
+          throw new NotFoundError("Quiz not found");
+        }
+
+        const attempt = await strapi.documents(QUIZ_ATTEMPT_UID).findFirst({
+          filters: { quiz: { documentId } },
+          fields: ["documentId"],
+        });
+
+        if (attempt) {
+          ctx.conflict("Quiz cannot be deleted because attempt records exist.");
+          return;
+        }
+
+        await super.delete(ctx);
+      },
+    );
   },
 }));
