@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CPS Academy frontend
 
-## Getting Started
+Batch A implements authentication (F1) and the application shell (F2). Courses,
+enrollment, lessons, quizzes, Blog, authoring, and Admin CRUD are not implemented.
 
-First, run the development server:
+## Run locally
 
-```bash
+Use the installed project dependencies, or run `npm ci` on a fresh checkout.
+Copy `.env.example` to your private `.env.local` and set
+`NEXT_PUBLIC_STRAPI_URL` to the Strapi origin (without an API path).
+Start the existing backend separately, then:
+
+```sh
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [CPS Academy](http://localhost:3000). The backend must allow this frontend
+origin through CORS. Public environment values are embedded at build time; rebuild
+after changing the deployment API origin. Do not put secrets in frontend variables.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | Access |
+| --- | --- |
+| `/` | Public entry page |
+| `/login` | Login form; active sessions continue to Account |
+| `/register` | Student registration; no role selector |
+| `/account` | Every authenticated account, including `role: null` |
 
-## Learn More
+Role-specific navigation shows future sections as disabled “Coming soon” items,
+without links to routes that do not exist yet.
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```text
+Server page/layout → client auth UI → Auth Context → auth API → apiRequest → Strapi
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Only the JWT is stored in `sessionStorage`, under `cps_academy:token`.
+- Login/register persist the JWT, then verify identity through `GET /api/me`.
+- Bootstrap starts in a loading state and commits the asynchronous restoration result.
+- A confirmed verification 401 clears the stored session. Network failures, 5xx,
+  permission errors, and malformed responses preserve it and offer retry/sign out.
+- Cancellation prevents old requests from replacing a newer session or undoing logout.
+- Forms own submission state. All successful sessions navigate to `/account`.
+- API responses enter as `unknown`; endpoint parsers validate only consumed fields.
+- Client route guards provide UX only. Strapi remains the authorization boundary.
+- All pages/layouts remain Server Components; browser interactions stay in the auth feature.
 
-## Deploy on Vercel
+`ProtectedShell` accepts an optional `allowedRoles` list for subsequent protected
+screens. The account route deliberately omits it so an unassigned account stays usable.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Styling uses the existing Tailwind stack and system fonts; builds do not fetch Google
+Fonts. No application dependencies were added.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Verify
+
+```sh
+npm run typecheck
+npm run lint
+npm test
+npm run build
+git diff --check
+```
+
+The 16 unit tests use Node's built-in test runner, an import hook, and the already
+installed TypeScript compiler. They were run with Node 22.23.2. Test fixtures do not
+contact Strapi or use real credentials. TypeScript remains a separate mandatory gate;
+the test import hook only handles execution.
+
+See [the Batch A report](./BATCH-A.md) for the exact verification performed and
+remaining live smoke checks.
