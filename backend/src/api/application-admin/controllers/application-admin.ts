@@ -18,6 +18,13 @@ type ManagedUser = Data.ContentType<
   "username" | "email" | "role"
 >;
 
+const LMS_ROLE_TYPES: Record<LmsRole, string> = {
+  Admin: "admin",
+  "Content Manager": "content-manager",
+  Instructor: "instructor",
+  Student: "student",
+};
+
 function requireAdmin(ctx: Context): void {
   const user = getAuthenticatedLmsUser(ctx.state.user);
 
@@ -114,19 +121,17 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       throw new NotFoundError("Application user not found.");
     }
 
-    const currentRoleName = user.role?.name;
     const currentRoleType = user.role?.type;
-    if (requestedRole === null) {
-      if (currentRoleType === "authenticated") {
-        ctx.body = { data: { user: userResponse(user) } };
-        return;
-      }
-    } else if (currentRoleName === requestedRole) {
+    const targetRoleType = requestedRole === null
+      ? "authenticated"
+      : LMS_ROLE_TYPES[requestedRole];
+
+    if (currentRoleType === targetRoleType) {
       ctx.body = { data: { user: userResponse(user) } };
       return;
     }
 
-    if (user.role?.name === LMS_ROLES.INSTRUCTOR) {
+    if (currentRoleType === LMS_ROLE_TYPES.Instructor) {
       const course = await strapi.documents("api::course.course").findFirst({
         filters: { instructor: { id: user.id } },
         fields: ["documentId"],
@@ -139,9 +144,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       }
     }
 
-    if (user.role?.name === LMS_ROLES.ADMIN && requestedRole !== LMS_ROLES.ADMIN) {
+    if (
+      currentRoleType === LMS_ROLE_TYPES.Admin &&
+      targetRoleType !== LMS_ROLE_TYPES.Admin
+    ) {
       const adminCount = await strapi.documents(USER_UID).count({
-        filters: { role: { name: LMS_ROLES.ADMIN } },
+        filters: { role: { type: LMS_ROLE_TYPES.Admin } },
       });
 
       if (adminCount <= 1) {
@@ -149,17 +157,16 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       }
     }
 
-    const role = requestedRole === null
-      ? await strapi.documents(ROLE_UID).findFirst({
-          filters: { type: "authenticated" },
-          fields: ["name"],
-        })
-      : await strapi.documents(ROLE_UID).findFirst({
-          filters: { name: requestedRole },
-          fields: ["name"],
-        });
+    const role = await strapi.documents(ROLE_UID).findFirst({
+      filters: { type: targetRoleType },
+      fields: ["name", "type"],
+    });
 
-    if (!role) {
+    if (
+      !role ||
+      role.type !== targetRoleType ||
+      (requestedRole !== null && role.name !== requestedRole)
+    ) {
       throw new ValidationError("The requested LMS role is not configured.");
     }
 

@@ -61,6 +61,20 @@ function getCourseDocumentId(params: unknown): string {
   return params.id;
 }
 
+function getCatalogDocumentId(value: unknown): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new NotFoundError("Course not found");
+  }
+
+  return value;
+}
+
+function publicInstructor(
+  instructor: { username?: string | null } | null | undefined,
+) {
+  return instructor?.username ? { username: instructor.username } : null;
+}
+
 async function lockCourseForUpdate(
   transaction: Knex.Transaction,
   documentId: string,
@@ -127,6 +141,87 @@ async function courseHasDependents(
 export default factories.createCoreController(
   "api::course.course",
   ({ strapi }) => ({
+    async catalog(ctx) {
+      const courses = await strapi.documents(COURSE_UID).findMany({
+        fields: ["documentId", "title", "description"],
+        populate: { instructor: { fields: ["username"] } },
+        sort: ["title:asc", "id:asc"],
+      });
+
+      ctx.body = {
+        data: {
+          courses: courses.map((course) => ({
+            documentId: course.documentId,
+            title: course.title,
+            description: course.description ?? null,
+            instructor: publicInstructor(course.instructor),
+          })),
+        },
+      };
+      ctx.status = 200;
+    },
+
+    async catalogDetail(ctx) {
+      const documentId = getCatalogDocumentId(ctx.params.courseDocumentId);
+      const course = await strapi.documents(COURSE_UID).findOne({
+        documentId,
+        fields: ["documentId", "title", "description"],
+        populate: { instructor: { fields: ["username"] } },
+      });
+
+      if (!course) {
+        throw new NotFoundError("Course not found");
+      }
+
+      const lessons = await strapi.documents(LESSON_UID).findMany({
+        filters: { course: { documentId } },
+        fields: ["title", "order"],
+        sort: ["order:asc", "id:asc"],
+      });
+
+      ctx.body = {
+        data: {
+          course: {
+            documentId: course.documentId,
+            title: course.title,
+            description: course.description ?? null,
+            instructor: publicInstructor(course.instructor),
+            syllabus: lessons.map((lesson) => ({
+              order: lesson.order,
+              title: lesson.title,
+            })),
+          },
+        },
+      };
+      ctx.status = 200;
+    },
+
+    async manageList(ctx) {
+      const user = getAuthenticatedLmsUser(ctx.state.user);
+
+      if (!user || !canWriteCourses(user.roleName)) {
+        throw new ForbiddenError("Access denied.");
+      }
+
+      // Ownership comes from the authenticated request, never Content API filters.
+      const courses = await strapi.documents(COURSE_UID).findMany({
+        filters: user.roleName === LMS_ROLES.INSTRUCTOR
+          ? { instructor: { id: user.id } }
+          : {},
+        fields: ["documentId", "title", "description"],
+        sort: ["title:asc", "id:asc"],
+      });
+
+      ctx.body = {
+        data: courses.map((course) => ({
+          documentId: course.documentId,
+          title: course.title,
+          description: course.description ?? null,
+        })),
+      };
+      ctx.status = 200;
+    },
+
     async create(ctx) {
       const user = getAuthenticatedLmsUser(ctx.state.user);
 
