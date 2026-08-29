@@ -19,7 +19,7 @@ export function PublicCourseCatalog() {
   const token = student ? auth.token : null;
   const [catalog, setCatalog] = useState<CatalogState>({ status: "loading" });
   const [enrollments, setEnrollments] = useState<EnrollmentSummary[]>([]);
-  const [enrollmentsReady, setEnrollmentsReady] = useState(false);
+  const [loadedToken, setLoadedToken] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ courseId: string; message: string; error: boolean } | null>(null);
@@ -36,22 +36,19 @@ export function PublicCourseCatalog() {
   }, [reload]);
 
   useEffect(() => {
-    setEnrollmentsReady(false);
-    if (!token) {
-      setEnrollments([]);
-      setEnrollmentsReady(true);
-      return;
-    }
+    if (!token) return;
     const controller = new AbortController();
     void getEnrollments(token, controller.signal).then((values) => {
-      if (!controller.signal.aborted) { setEnrollments(values); setEnrollmentsReady(true); }
+      if (!controller.signal.aborted) { setEnrollments(values); setLoadedToken(token); }
     }).catch((error: unknown) => {
       if (controller.signal.aborted) return;
       if (error instanceof ApiError && error.status === 401) logout();
-      else { setFeedback({ courseId: "", message: requestErrorMessage(error), error: true }); setEnrollmentsReady(true); }
+      else { setFeedback({ courseId: "", message: requestErrorMessage(error), error: true }); setLoadedToken(token); }
     });
     return () => { controller.abort(); enrollmentRequest.current?.abort(); };
   }, [token, logout]);
+
+  const enrollmentsReady = !student || loadedToken === token;
 
   async function enroll(courseId: string) {
     if (!token || enrollmentRequest.current) return;

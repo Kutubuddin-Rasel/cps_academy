@@ -12,27 +12,28 @@ export function PublicCourseDetailView({ course }: { course: PublicCourseDetail 
   const student = auth.status === "authenticated" && auth.user.role === "Student";
   const token = student ? auth.token : null;
   const [enrolled, setEnrolled] = useState(false);
-  const [ready, setReady] = useState(!student);
+  const [loadedToken, setLoadedToken] = useState<string | null>(null);
   const [enrolling, setEnrolling] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const request = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!token) { setEnrolled(false); setReady(true); return; }
-    setReady(false);
+    if (!token) return;
     const controller = new AbortController();
     void getEnrollments(token, controller.signal).then((values) => {
       if (!controller.signal.aborted) {
         setEnrolled(values.some((item) => item.course.documentId === course.documentId));
-        setReady(true);
+        setLoadedToken(token);
       }
     }).catch((error: unknown) => {
       if (controller.signal.aborted) return;
       if (error instanceof ApiError && error.status === 401) logout();
-      else { setMessage({ text: requestErrorMessage(error), error: true }); setReady(true); }
+      else { setMessage({ text: requestErrorMessage(error), error: true }); setLoadedToken(token); }
     });
     return () => { controller.abort(); request.current?.abort(); };
   }, [course.documentId, token, logout]);
+
+  const ready = !student || loadedToken === token;
 
   async function enroll() {
     if (!token || request.current) return;
@@ -84,7 +85,9 @@ export function PublicCourseDetailView({ course }: { course: PublicCourseDetail 
           <h2 className="text-xl font-semibold text-slate-950">Start this course</h2>
           <p className="mt-3 leading-7 text-slate-600">Enroll to unlock protected lessons, progress tracking, and quizzes.</p>
           <div className="mt-6 flex flex-col gap-3">
-            {auth.status === "unauthenticated" ? (
+            {auth.status === "loading" ? (
+              <p role="status" className="text-sm text-slate-600">Checking session…</p>
+            ) : auth.status === "unauthenticated" || auth.status === "error" ? (
               <><Link href="/login" className="button-primary">Sign in to enroll</Link><Link href="/register" className="button-secondary">Create account</Link></>
             ) : student && ready ? enrolled ? (
               <Link href={`/learn/${encodeURIComponent(course.documentId)}`} className="button-primary">Continue learning</Link>
