@@ -12,7 +12,7 @@ export function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <Link href="/" className="flex min-h-11 items-center gap-3 font-semibold tracking-tight">
           <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-700 text-sm text-white">CPS</span>
@@ -31,7 +31,7 @@ export function AppHeader() {
         ) : state.status === "unauthenticated" ? (
           <nav aria-label="Account" className="flex gap-2">
             <Link href="/login" className="button-secondary" aria-current={pathname === "/login" ? "page" : undefined}>Log in</Link>
-            <Link href="/register" className="button-primary" aria-current={pathname === "/register" ? "page" : undefined}>Register</Link>
+            <Link href="/register" className="button-primary" aria-current={pathname === "/register" ? "page" : undefined}>Create account</Link>
           </nav>
         ) : state.status === "error" ? (
           <Link href="/account" className="text-link">Session help</Link>
@@ -42,19 +42,21 @@ export function AppHeader() {
           <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:flex-wrap lg:gap-2">
             {getNavigationItems(state.user.role).map((item) => (
               <li key={item.label}>
-                {item.href ? (
-                  <Link href={item.href} onClick={() => setMenuOpen(false)} aria-current={pathname === item.href ? "page" : undefined}
-                    className="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-800">{item.label}</Link>
-                ) : (
-                  <span aria-disabled="true" className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-500">
-                    {item.label}<span className="rounded border border-slate-200 px-1.5 py-0.5 text-xs">Coming soon</span>
-                  </span>
-                )}
+                <Link href={item.href} onClick={() => setMenuOpen(false)} aria-current={pathname === item.href ? "page" : undefined}
+                  className="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-800">{item.label}</Link>
               </li>
             ))}
           </ul>
         </nav>
-      ) : null}
+      ) : (
+        <nav aria-label="Public" className="border-t border-slate-100">
+          <ul className="mx-auto flex max-w-6xl flex-wrap gap-1 px-4 py-2 sm:px-6">
+            {[{ label: "Courses", href: "/courses" }, { label: "Blog", href: "/blog" }, { label: "About", href: "/about" }].map((item) => (
+              <li key={item.href}><Link href={item.href} aria-current={pathname === item.href ? "page" : undefined} className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium hover:bg-slate-100 aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-800">{item.label}</Link></li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }
