@@ -20,10 +20,10 @@ export function canManageBlog(role: LmsRole | null): boolean {
 export function getNavigationItems(role: LmsRole | null): NavigationItem[] {
   const items: NavigationItem[] = [{ label: "Account", href: "/account" }];
   // Later milestones own these destinations; do not create links to missing pages.
-  if (role === "Admin") items.push({ label: "Admin", href: null });
-  if (role !== null) items.push({ label: "Courses", href: null });
-  if (role === "Student") items.push({ label: "My Courses", href: null });
-  if (isStaffRole(role)) items.push({ label: "Manage Courses", href: null });
+  if (role === "Admin") items.push({ label: "Admin", href: "/admin" });
+  if (role !== null) items.push({ label: "Courses", href: role === "Student" ? "/courses" : null });
+  if (role === "Student") items.push({ label: "My Courses", href: "/my-courses" });
+  if (isStaffRole(role)) items.push({ label: "Manage Courses", href: "/manage/courses" });
   if (canManageBlog(role)) items.push({ label: "Manage Blog", href: null });
   items.push({ label: "Blog", href: null });
   return items;
