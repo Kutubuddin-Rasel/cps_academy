@@ -383,7 +383,3 @@ Production secrets, database credentials, JWT secrets, salts, and encryption key
 ## Author
 
 Built as a Junior Software Engineer technical assignment.
-
-## License
-
-No license has been applied yet. Add one here (for example, MIT) if this project will be shared or open-sourced.
