@@ -1,41 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { getCourseProgress } from "@/features/learning/api";
 import { ApiError, requestErrorMessage } from "@/lib/api/error";
-import { getEnrollments, getPublicCourses } from "./api";
+import { getEnrollments } from "./api";
 import { CourseCard } from "./course-card";
 import { publicCourseGridClassName } from "./public-course-layout";
 import { buildStudentCourseResumes, studentCourseActionLabel } from "./student-course-resume";
 import type { StudentCourseResume } from "./student-course-resume";
 import type { PublicCourseSummary } from "./types";
 
-type CatalogState =
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; courses: PublicCourseSummary[] };
-
-export function PublicCourseCatalog() {
+export function PublicCourseCatalog({ courses, errorMessage }: { courses: PublicCourseSummary[]; errorMessage: string | null }) {
+  const router = useRouter();
   const { state: auth, logout } = useAuth();
   const student = auth.status === "authenticated" && auth.user.role === "Student";
   const token = student ? auth.token : null;
-  const [catalog, setCatalog] = useState<CatalogState>({ status: "loading" });
   const [resumes, setResumes] = useState<StudentCourseResume[]>([]);
   const [loadedToken, setLoadedToken] = useState<string | null>(null);
-  const [reload, setReload] = useState(0);
   const [feedback, setFeedback] = useState<{ courseId: string; message: string; error: boolean } | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void getPublicCourses(controller.signal).then((courses) => {
-      if (!controller.signal.aborted) setCatalog({ status: "ready", courses });
-    }).catch((error: unknown) => {
-      if (!controller.signal.aborted) setCatalog({ status: "error", message: requestErrorMessage(error) });
-    });
-    return () => controller.abort();
-  }, [reload]);
 
   useEffect(() => {
     if (!token) return;
@@ -74,16 +59,16 @@ export function PublicCourseCatalog() {
         <p className="page-intro">Explore CPS Academy courses and review each syllabus before you enroll.</p>
       </header>
       {feedback?.courseId === "" ? <p role="alert" className="border-l-2 border-red-700 bg-red-50 px-4 py-3 text-red-800">{feedback.message}</p> : null}
-      {catalog.status === "loading" ? <p role="status" className="text-slate-600">Loading courses…</p> : catalog.status === "error" ? (
+      {errorMessage ? (
         <div className="border-l-2 border-red-700 bg-red-50 px-5 py-4">
-          <p role="alert" className="text-red-800">{catalog.message}</p>
-          <button type="button" className="button-secondary mt-4" onClick={() => { setCatalog({ status: "loading" }); setReload((value) => value + 1); }}>Try again</button>
+          <p role="alert" className="text-red-800">{errorMessage}</p>
+          <button type="button" className="button-secondary mt-4" onClick={() => router.refresh()}>Try again</button>
         </div>
-      ) : catalog.courses.length === 0 ? (
+      ) : courses.length === 0 ? (
         <p className="border-l-2 border-slate-300 pl-5 text-slate-600">No courses are available yet. Please check back later.</p>
       ) : (
-        <ul className={publicCourseGridClassName(catalog.courses.length)}>
-          {catalog.courses.map((course) => {
+        <ul className={publicCourseGridClassName(courses.length)}>
+          {courses.map((course) => {
             const resume = resumeByCourseId.get(course.documentId);
             const courseHref = `/courses/${encodeURIComponent(course.documentId)}`;
             let actions = <Link href={courseHref} className="button-primary">View course</Link>;

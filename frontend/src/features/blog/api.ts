@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api/request";
+import { apiRequest, publicApiRequest } from "@/lib/api/request";
 import { bodyToBlocks } from "./content";
 import { parseManagedPost, parseManagedPosts, parsePublishedPost, parsePublishedPosts } from "./parsers";
 import type { BlogEditorInput, BlogPost, ManagedBlogPost } from "./types";
@@ -12,11 +12,11 @@ function blogData(input: BlogEditorInput) {
 }
 
 export async function getPublishedPosts(signal: AbortSignal): Promise<BlogPost[]> {
-  return parsePublishedPosts(await apiRequest("/api/blog", { signal }));
+  return parsePublishedPosts(await publicApiRequest("/api/blog", signal));
 }
 
 export async function getPublishedPost(documentId: string, signal: AbortSignal): Promise<BlogPost> {
-  return parsePublishedPost(await apiRequest(`/api/blog/${encodeURIComponent(documentId)}`, { signal }));
+  return parsePublishedPost(await publicApiRequest(`/api/blog/${encodeURIComponent(documentId)}`, signal));
 }
 
 export async function getManagedPosts(token: string, signal: AbortSignal): Promise<ManagedBlogPost[]> {

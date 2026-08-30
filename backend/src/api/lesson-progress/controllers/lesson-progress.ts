@@ -169,6 +169,7 @@ function getLearningLessonData(value: unknown) {
 export default factories.createCoreController(PROGRESS_UID, ({ strapi }) => ({
   async complete(ctx) {
     const user = getStudentUser(ctx.state.user);
+    
     rejectClientCompletionData(ctx.request.body);
     const documentId = getLessonDocumentId(ctx.params);
 

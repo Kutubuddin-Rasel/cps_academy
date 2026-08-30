@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/api/request";
+import { apiRequest, publicApiRequest } from "@/lib/api/request";
 import {
   parseCourseDetail,
   parseCourseList,
@@ -28,9 +28,9 @@ export async function enrollInCourse(courseId: string, token: string, signal: Ab
 }
 
 export async function getPublicCourses(signal: AbortSignal): Promise<PublicCourseSummary[]> {
-  return parsePublicCourseList(await apiRequest("/api/catalog/courses", { signal }));
+  return parsePublicCourseList(await publicApiRequest("/api/catalog/courses", signal));
 }
 
 export async function getPublicCourse(courseId: string, signal: AbortSignal): Promise<PublicCourseDetail> {
-  return parsePublicCourseDetail(await apiRequest(`/api/catalog/courses/${encodeURIComponent(courseId)}`, { signal }));
+  return parsePublicCourseDetail(await publicApiRequest(`/api/catalog/courses/${encodeURIComponent(courseId)}`, signal));
 }
