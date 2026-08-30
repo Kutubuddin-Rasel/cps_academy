@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { AppHeader } from "@/features/auth/app-header";
 import "./globals.css";
@@ -15,11 +16,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-lg focus:bg-white focus:p-4">Skip to content</a>
         <AuthProvider>
           <AppHeader />
-          <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6 sm:py-12">
+          <main id="main-content" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-12">
             {children}
           </main>
         </AuthProvider>
-        <footer className="border-t border-slate-200 px-4 py-5 text-center text-sm text-slate-600">CPS Academy · Learn at your own pace</footer>
+        <footer className="border-t border-slate-200 bg-white">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-6 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <p>CPS Academy · Structured learning, visible progress</p>
+            <nav aria-label="Footer">
+              <ul className="flex flex-wrap gap-x-5 gap-y-2">
+                <li><Link href="/courses" className="inline-flex min-h-11 items-center font-medium text-slate-700 hover:text-blue-800">Courses</Link></li>
+                <li><Link href="/blog" className="inline-flex min-h-11 items-center font-medium text-slate-700 hover:text-blue-800">Blog</Link></li>
+                <li><Link href="/about" className="inline-flex min-h-11 items-center font-medium text-slate-700 hover:text-blue-800">About</Link></li>
+              </ul>
+            </nav>
+          </div>
+        </footer>
       </body>
     </html>
   );

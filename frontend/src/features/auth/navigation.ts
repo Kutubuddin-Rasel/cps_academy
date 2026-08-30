@@ -18,13 +18,39 @@ export function canManageBlog(role: LmsRole | null): boolean {
 }
 
 export function getNavigationItems(role: LmsRole | null): NavigationItem[] {
-  const items: NavigationItem[] = [{ label: "Account", href: "/account" }];
-  if (role === "Admin") items.push({ label: "Admin", href: "/admin" });
-  items.push({ label: "Courses", href: "/courses" });
-  if (role === "Student") items.push({ label: "My Courses", href: "/my-courses" });
-  if (isStaffRole(role)) items.push({ label: "Manage Courses", href: "/manage/courses" });
-  if (canManageBlog(role)) items.push({ label: "Manage Blog", href: "/manage/blog" });
-  items.push({ label: "Blog", href: "/blog" });
-  items.push({ label: "About", href: "/about" });
-  return items;
+  const publicItems: NavigationItem[] = [
+    { label: "Courses", href: "/courses" },
+    { label: "Blog", href: "/blog" },
+    { label: "About", href: "/about" },
+  ];
+
+  if (role === "Student") return [{ label: "My Courses", href: "/my-courses" }, ...publicItems];
+  if (role === "Instructor") return [{ label: "Manage Courses", href: "/manage/courses" }, ...publicItems];
+  if (role === "Content Manager") {
+    return [
+      { label: "Manage Courses", href: "/manage/courses" },
+      { label: "Manage Blog", href: "/manage/blog" },
+      ...publicItems,
+    ];
+  }
+  if (role === "Admin") {
+    return [
+      { label: "Admin", href: "/admin" },
+      { label: "Manage Courses", href: "/manage/courses" },
+      { label: "Manage Blog", href: "/manage/blog" },
+      ...publicItems,
+    ];
+  }
+  return publicItems;
+}
+
+export function isNavigationItemActive(pathname: string, href: string): boolean {
+  const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+
+  if (href === "/my-courses" && normalizedPathname.startsWith("/learn/")) return true;
+  if (href === "/account" || href === "/about" || href === "/my-courses") {
+    return normalizedPathname === href;
+  }
+
+  return normalizedPathname === href || normalizedPathname.startsWith(`${href}/`);
 }

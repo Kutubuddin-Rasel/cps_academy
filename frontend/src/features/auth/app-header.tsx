@@ -4,59 +4,121 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "./AuthProvider";
-import { getNavigationItems } from "./navigation";
+import { getNavigationItems, isNavigationItemActive } from "./navigation";
+
+const publicNavigation = [
+  { label: "Courses", href: "/courses" },
+  { label: "Blog", href: "/blog" },
+  { label: "About", href: "/about" },
+];
 
 export function AppHeader() {
   const { state, logout } = useAuth();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  function publicAccountActions(mobile = false) {
+    const actionClass = mobile ? "w-full" : "";
+    if (state.status === "unauthenticated") {
+      return (
+        <>
+          <Link href="/login" onClick={() => setMenuOpen(false)} className={`button-secondary ${actionClass}`} aria-current={pathname === "/login" ? "page" : undefined}>Log in</Link>
+          <Link href="/register" onClick={() => setMenuOpen(false)} className={`button-primary ${actionClass}`} aria-current={pathname === "/register" ? "page" : undefined}>Create account</Link>
+        </>
+      );
+    }
+    if (state.status === "error") {
+      return <Link href="/account" onClick={() => setMenuOpen(false)} className={`button-tertiary ${actionClass}`}>Session help</Link>;
+    }
+    return <p role="status" className="text-sm text-slate-600">Checking session…</p>;
+  }
+
   return (
-    <header className="border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+    <header className="border-b border-slate-200 bg-white">
+      <div className="mx-auto flex min-h-[4.75rem] max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link href="/" className="flex min-h-11 items-center gap-3 font-semibold tracking-tight">
           <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-700 text-sm text-white">CPS</span>
           <span>CPS Academy</span>
         </Link>
         {state.status === "authenticated" ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="max-w-56 truncate text-sm text-slate-600">
-              <span className="font-medium text-slate-900">{state.user.username}</span>
-              <span className="block text-xs">{state.user.role ?? "No LMS role"}</span>
-            </p>
-            <button type="button" className="button-secondary" onClick={() => { setMenuOpen(false); logout(); }}>Log out</button>
+          <>
+            <nav aria-label="Application" className="hidden lg:block">
+              <ul className="flex items-center gap-1">
+                {getNavigationItems(state.user.role).map((item) => (
+                  <li key={item.label}>
+                    <Link href={item.href} aria-current={isNavigationItemActive(pathname, item.href) ? "page" : undefined}
+                      className="flex min-h-11 items-center border-b-2 border-transparent px-3 text-sm font-medium text-slate-700 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:font-semibold aria-[current=page]:text-blue-800">{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <div className="hidden items-center gap-2 lg:flex">
+              <Link href="/account" aria-current={pathname === "/account" ? "page" : undefined}
+                className="flex min-h-11 max-w-48 items-center border-b-2 border-transparent px-2 text-left text-sm text-slate-600 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:text-blue-800">
+                <span className="min-w-0"><span className="block truncate font-semibold">{state.user.username}</span><span className="block truncate text-xs">{state.user.role ?? "No LMS role"}</span></span>
+              </Link>
+              <button type="button" className="button-secondary" onClick={() => { setMenuOpen(false); logout(); }}>Log out</button>
+            </div>
             <button type="button" className="button-secondary lg:hidden" aria-expanded={menuOpen} aria-controls="account-navigation"
               onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? "Close menu" : "Menu"}</button>
-          </div>
-        ) : state.status === "unauthenticated" ? (
-          <nav aria-label="Account" className="flex gap-2">
-            <Link href="/login" className="button-secondary" aria-current={pathname === "/login" ? "page" : undefined}>Log in</Link>
-            <Link href="/register" className="button-primary" aria-current={pathname === "/register" ? "page" : undefined}>Create account</Link>
-          </nav>
-        ) : state.status === "error" ? (
-          <Link href="/account" className="text-link">Session help</Link>
-        ) : <p role="status" className="text-sm text-slate-600">Checking session…</p>}
+          </>
+        ) : (
+          <>
+            <nav aria-label="Public" className="hidden md:block">
+              <ul className="flex items-center gap-1">
+                {publicNavigation.map((item) => (
+                  <li key={item.href}>
+                    <Link href={item.href} aria-current={isNavigationItemActive(pathname, item.href) ? "page" : undefined}
+                      className="flex min-h-11 items-center border-b-2 border-transparent px-3 text-sm font-medium text-slate-700 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:font-semibold aria-[current=page]:text-blue-800">{item.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+            <nav aria-label="Account" className="hidden items-center gap-2 md:flex">
+              {publicAccountActions()}
+            </nav>
+            <button type="button" className="button-secondary md:hidden" aria-expanded={menuOpen} aria-controls="public-navigation"
+              onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? "Close menu" : "Menu"}</button>
+          </>
+        )}
       </div>
-      {state.status === "authenticated" ? (
-        <nav id="account-navigation" aria-label="Application" className={`${menuOpen ? "block" : "hidden"} border-t border-slate-100 lg:block`}>
-          <ul className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:flex-wrap lg:gap-2">
-            {getNavigationItems(state.user.role).map((item) => (
-              <li key={item.label}>
-                <Link href={item.href} onClick={() => setMenuOpen(false)} aria-current={pathname === item.href ? "page" : undefined}
-                  className="flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-800">{item.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      ) : (
-        <nav aria-label="Public" className="border-t border-slate-100">
-          <ul className="mx-auto flex max-w-6xl flex-wrap gap-1 px-4 py-2 sm:px-6">
-            {[{ label: "Courses", href: "/courses" }, { label: "Blog", href: "/blog" }, { label: "About", href: "/about" }].map((item) => (
-              <li key={item.href}><Link href={item.href} aria-current={pathname === item.href ? "page" : undefined} className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium hover:bg-slate-100 aria-[current=page]:bg-blue-50 aria-[current=page]:text-blue-800">{item.label}</Link></li>
-            ))}
-          </ul>
-        </nav>
-      )}
+      {state.status === "authenticated" && menuOpen ? (
+        <div id="account-navigation" className="border-t border-slate-200 bg-white px-4 py-4 sm:px-6 lg:hidden">
+          <nav aria-label="Application">
+            <ul className="space-y-1">
+              {getNavigationItems(state.user.role).map((item) => (
+                <li key={item.label}>
+                  <Link href={item.href} onClick={() => setMenuOpen(false)} aria-current={isNavigationItemActive(pathname, item.href) ? "page" : undefined}
+                    className="flex min-h-11 items-center border-l-2 border-transparent px-3 text-sm font-medium text-slate-700 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:font-semibold aria-[current=page]:text-blue-800">{item.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="mt-3 border-t border-slate-200 pt-4">
+            <Link href="/account" onClick={() => setMenuOpen(false)} aria-current={pathname === "/account" ? "page" : undefined}
+              className="flex min-h-11 items-center border-l-2 border-transparent px-3 text-sm text-slate-600 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:text-blue-800">
+              <span className="min-w-0"><span className="block truncate font-semibold">{state.user.username}</span><span className="block truncate text-xs">{state.user.role ?? "No LMS role"}</span></span>
+            </Link>
+            <button type="button" className="button-secondary mt-3 w-full" onClick={() => { setMenuOpen(false); logout(); }}>Log out</button>
+          </div>
+        </div>
+      ) : menuOpen ? (
+        <div id="public-navigation" className="border-t border-slate-200 bg-white px-4 py-4 md:hidden">
+          <nav aria-label="Public">
+            <ul className="space-y-1">
+              {publicNavigation.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} onClick={() => setMenuOpen(false)} aria-current={isNavigationItemActive(pathname, item.href) ? "page" : undefined}
+                    className="flex min-h-11 items-center border-l-2 border-transparent px-3 text-sm font-medium text-slate-700 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:font-semibold aria-[current=page]:text-blue-800">{item.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label="Account" className="mt-3 flex flex-col gap-2 border-t border-slate-200 pt-4">
+            {publicAccountActions(true)}
+          </nav>
+        </div>
+      ) : null}
     </header>
   );
 }

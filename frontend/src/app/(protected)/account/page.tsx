@@ -5,10 +5,9 @@ export const metadata: Metadata = { title: "Your account" };
 
 export default function AccountPage() {
   return (
-    <div>
-      <p className="text-sm font-medium text-blue-700">CPS Academy</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Your account</h1>
-      <p className="mb-8 mt-3 text-slate-600">Welcome. Here’s your account information and current access.</p>
+    <div className="max-w-3xl">
+      <h1 className="text-3xl font-semibold tracking-tight text-slate-950">Your account</h1>
+      <p className="mb-8 mt-3 text-slate-600">Your identity and current LMS access.</p>
       <AccountOverview />
     </div>
   );
