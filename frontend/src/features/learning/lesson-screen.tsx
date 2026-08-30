@@ -87,7 +87,7 @@ export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonI
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 [overflow-wrap:anywhere]">
-      <Link href={courseHref} className="text-link inline-flex min-h-11 items-center">← Back to course overview</Link>
+      <Link href={courseHref} className="context-link">← Course overview</Link>
       {loadError ? (
         <section className="rounded-xl border border-red-200 bg-white p-6">
           <h1 className="text-2xl font-semibold">
@@ -122,7 +122,7 @@ export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonI
           {progress ? <ProgressSummary {...progress} /> : null}
           {lesson.completed && nextLesson ? (
             <Link href={`/learn/${encodeURIComponent(courseId)}/lessons/${encodeURIComponent(nextLesson.documentId)}`} className="button-primary">Continue to {nextLesson.title}</Link>
-          ) : <Link href={courseHref} className="button-secondary">Return to Course</Link>}
+          ) : <Link href={courseHref} className="context-link">Course overview <span aria-hidden="true">→</span></Link>}
         </>
       )}
     </div>

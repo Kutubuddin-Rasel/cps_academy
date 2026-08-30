@@ -55,9 +55,10 @@ export function QuizScreen({ courseId, quizId }: { courseId: string; quizId: str
     if (result) resultRegion.current?.focus();
   }, [result]);
 
-  const allAnswered = quiz !== null && quiz.questions.length > 0 && quiz.questions.every((question) => (
-    question.options.some((option) => option.optionKey === answers[question.questionKey])
-  ));
+  const answeredCount = quiz?.questions.reduce((count, question) => (
+    count + (question.options.some((option) => option.optionKey === answers[question.questionKey]) ? 1 : 0)
+  ), 0) ?? 0;
+  const allAnswered = quiz !== null && quiz.questions.length > 0 && answeredCount === quiz.questions.length;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,7 +94,7 @@ export function QuizScreen({ courseId, quizId }: { courseId: string; quizId: str
 
   return (
     <div className="mx-auto max-w-3xl space-y-8 [overflow-wrap:anywhere]">
-      <Link href={`/learn/${encodeURIComponent(courseId)}`} className="text-link inline-flex min-h-11 items-center">← Back to course overview</Link>
+      <Link href={`/learn/${encodeURIComponent(courseId)}`} className="context-link">← Course overview</Link>
       {loadError ? (
         <section className="rounded-xl border border-red-200 bg-white p-6">
           <h1 className="text-2xl font-semibold">{loadError.status === 403 ? "Quiz access denied" : loadError.status === 404 ? "Quiz not found" : "Quiz unavailable"}</h1>
@@ -113,7 +114,7 @@ export function QuizScreen({ courseId, quizId }: { courseId: string; quizId: str
                 <p><span className="text-sm text-slate-600">Score</span><span className="ml-3 text-2xl font-semibold">{result.score} / {result.total}</span></p>
                 <p><span className="text-sm text-slate-600">Percentage</span><span className="ml-3 text-2xl font-semibold">{result.percentage}%</span></p>
               </div>
-              <Link href={`/learn/${encodeURIComponent(courseId)}`} className="button-primary mt-6">Return to Course</Link>
+              <Link href={`/learn/${encodeURIComponent(courseId)}`} className="context-link mt-5 text-emerald-900 hover:text-emerald-950">Course overview <span aria-hidden="true">→</span></Link>
             </section>
           ) : null}
           {quiz.questions.length === 0 ? <p className="rounded-xl border border-slate-200 bg-white p-6">No questions are available in this quiz yet.</p> : (
@@ -122,9 +123,9 @@ export function QuizScreen({ courseId, quizId }: { courseId: string; quizId: str
                 {quiz.questions.map((question, index) => (
                   <fieldset key={question.questionKey} disabled={submitting} className="min-w-0 py-7">
                     <legend className="max-w-full text-lg font-semibold text-slate-950"><span className="mr-2 font-mono text-sm tabular-nums text-blue-700">{String(index + 1).padStart(2, "0")}</span>{question.prompt}</legend>
-                    <div className="mt-5 space-y-3">
+                    <div className="mt-5 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white">
                       {question.options.map((option) => (
-                        <label key={option.optionKey} className="flex min-h-11 items-start gap-3 rounded-lg border border-slate-300 bg-white p-3 has-checked:border-blue-700 has-checked:bg-blue-50">
+                        <label key={option.optionKey} className="flex min-h-12 cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-slate-50 has-checked:bg-blue-50 motion-reduce:transition-none">
                           <input type="radio" name={`question-${question.questionKey}`} value={option.optionKey} required checked={answers[question.questionKey] === option.optionKey}
                             onChange={() => setAnswers((current) => ({ ...current, [question.questionKey]: option.optionKey }))} className="mt-0.5 size-5 shrink-0 accent-blue-700" />
                           <span className="min-w-0 leading-6">{option.text}</span>
@@ -135,7 +136,10 @@ export function QuizScreen({ courseId, quizId }: { courseId: string; quizId: str
                 ))}
               </div>
               {submitError ? <p id="quiz-submit-error" role="alert" className="text-red-800">{submitError}</p> : null}
-              <button type="submit" className="button-primary" disabled={!allAnswered || submitting} aria-describedby={submitError ? "quiz-submit-error" : "quiz-answer-help"}>{submitting ? "Submitting…" : result ? "Submit another attempt" : "Submit quiz"}</button>
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p id="quiz-answer-progress" role="status" aria-live="polite" className="font-mono text-sm tabular-nums text-slate-600">{answeredCount} of {quiz.questions.length} answered</p>
+                <button type="submit" className="button-primary" disabled={!allAnswered || submitting} aria-describedby={submitError ? "quiz-answer-help quiz-answer-progress quiz-submit-error" : "quiz-answer-help quiz-answer-progress"}>{submitting ? "Submitting…" : result ? "Submit another attempt" : "Submit quiz"}</button>
+              </div>
             </form>
           )}
           <section aria-labelledby="quiz-history">
@@ -146,7 +150,7 @@ export function QuizScreen({ courseId, quizId }: { courseId: string; quizId: str
                 <button type="button" className="button-secondary mt-4" onClick={() => { setHistoryError(null); setAttempts(null); setHistoryReload((value) => value + 1); }}>Retry history</button>
               </div>
             ) : attempts === null ? <p role="status" className="mt-4">Loading attempt history…</p> : attempts.length === 0 ? (
-              <p className="mt-4 border-l-2 border-slate-300 pl-5 text-slate-600">No previous attempts yet. Submit your answers to see your first result.</p>
+              <p className="mt-4 text-slate-600">No previous attempts yet. Submit your answers to see your first result.</p>
             ) : (
               <div className="mt-4 overflow-x-auto border-y border-slate-200">
                 <table className="w-full min-w-[28rem] border-collapse text-left text-sm">

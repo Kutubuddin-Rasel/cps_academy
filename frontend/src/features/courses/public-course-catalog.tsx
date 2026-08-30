@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { getCourseProgress } from "@/features/learning/api";
 import { ApiError, requestErrorMessage } from "@/lib/api/error";
-import { enrollInCourse, getEnrollments, getPublicCourses } from "./api";
+import { getEnrollments, getPublicCourses } from "./api";
 import { CourseCard } from "./course-card";
 import { publicCourseGridClassName } from "./public-course-layout";
-import type { EnrollmentSummary, PublicCourseSummary } from "./types";
+import { buildStudentCourseResumes, studentCourseActionLabel } from "./student-course-resume";
+import type { StudentCourseResume } from "./student-course-resume";
+import type { PublicCourseSummary } from "./types";
 
 type CatalogState =
   | { status: "loading" }
@@ -19,12 +22,10 @@ export function PublicCourseCatalog() {
   const student = auth.status === "authenticated" && auth.user.role === "Student";
   const token = student ? auth.token : null;
   const [catalog, setCatalog] = useState<CatalogState>({ status: "loading" });
-  const [enrollments, setEnrollments] = useState<EnrollmentSummary[]>([]);
+  const [resumes, setResumes] = useState<StudentCourseResume[]>([]);
   const [loadedToken, setLoadedToken] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
-  const [enrolling, setEnrolling] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ courseId: string; message: string; error: boolean } | null>(null);
-  const enrollmentRequest = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -39,38 +40,31 @@ export function PublicCourseCatalog() {
   useEffect(() => {
     if (!token) return;
     const controller = new AbortController();
-    void getEnrollments(token, controller.signal).then((values) => {
-      if (!controller.signal.aborted) { setEnrollments(values); setLoadedToken(token); }
+    void getEnrollments(token, controller.signal).then(async (enrollments) => {
+      const progressResults = await Promise.allSettled(enrollments.map(({ course }) => (
+        getCourseProgress(course.documentId, token, controller.signal)
+      )));
+      if (controller.signal.aborted) return;
+      if (progressResults.some((item) => item.status === "rejected" && item.reason instanceof ApiError && item.reason.status === 401)) {
+        logout();
+        return;
+      }
+      setResumes(buildStudentCourseResumes(enrollments, progressResults));
+      setLoadedToken(token);
     }).catch((error: unknown) => {
       if (controller.signal.aborted) return;
       if (error instanceof ApiError && error.status === 401) logout();
-      else { setFeedback({ courseId: "", message: requestErrorMessage(error), error: true }); setLoadedToken(token); }
+      else {
+        setResumes([]);
+        setFeedback({ courseId: "", message: requestErrorMessage(error), error: true });
+        setLoadedToken(token);
+      }
     });
-    return () => { controller.abort(); enrollmentRequest.current?.abort(); };
+    return () => controller.abort();
   }, [token, logout]);
 
   const enrollmentsReady = !student || loadedToken === token;
-
-  async function enroll(courseId: string) {
-    if (!token || enrollmentRequest.current) return;
-    const controller = new AbortController();
-    enrollmentRequest.current = controller;
-    setEnrolling(courseId);
-    setFeedback(null);
-    try {
-      const enrollment = await enrollInCourse(courseId, token, controller.signal);
-      if (controller.signal.aborted) return;
-      setEnrollments((current) => [...current.filter((item) => item.course.documentId !== courseId), enrollment]);
-      setFeedback({ courseId, message: "You’re enrolled. Your course is ready.", error: false });
-    } catch (error: unknown) {
-      if (controller.signal.aborted) return;
-      if (error instanceof ApiError && error.status === 401) logout();
-      else setFeedback({ courseId, message: requestErrorMessage(error), error: true });
-    } finally {
-      if (!controller.signal.aborted) setEnrolling(null);
-      if (enrollmentRequest.current === controller) enrollmentRequest.current = null;
-    }
-  }
+  const resumeByCourseId = new Map(resumes.map((resume) => [resume.enrollment.course.documentId, resume]));
 
   return (
     <div className="space-y-9">
@@ -90,18 +84,17 @@ export function PublicCourseCatalog() {
       ) : (
         <ul className={publicCourseGridClassName(catalog.courses.length)}>
           {catalog.courses.map((course) => {
-            const enrolled = enrollments.some((item) => item.course.documentId === course.documentId);
+            const resume = resumeByCourseId.get(course.documentId);
             const courseHref = `/courses/${encodeURIComponent(course.documentId)}`;
             let actions = <Link href={courseHref} className="button-primary">View course</Link>;
             if (student && enrollmentsReady) {
-              actions = enrolled
-                ? <><Link href={`/learn/${encodeURIComponent(course.documentId)}`} className="button-primary">Continue learning</Link><Link href={courseHref} className="button-tertiary">View course</Link></>
-                : <><Link href={courseHref} className="button-primary">View course</Link><button type="button" className="button-tertiary" disabled={enrolling !== null} onClick={() => { void enroll(course.documentId); }}>{enrolling === course.documentId ? "Enrolling…" : "Enroll"}</button></>;
+              actions = resume
+                ? <><Link href={`/learn/${encodeURIComponent(course.documentId)}`} className="button-primary">{studentCourseActionLabel(resume.progress)}</Link><Link href={courseHref} className="context-link">View details</Link></>
+                : <Link href={courseHref} className="button-primary">View course</Link>;
             }
             return (
               <li key={course.documentId}>
                 <CourseCard course={course} actions={actions} />
-                {feedback?.courseId === course.documentId ? <p role={feedback.error ? "alert" : "status"} className={`mt-3 text-sm ${feedback.error ? "text-red-800" : "text-emerald-800"}`}>{feedback.message}</p> : null}
               </li>
             );
           })}

@@ -25,10 +25,10 @@ export function LessonSequence({ courseId, lessons }: { courseId: string; lesson
                   <p className={`mt-1 text-sm ${state === "completed" ? "text-emerald-800" : state === "current" ? "text-blue-800" : "text-slate-600"}`}>{presentation.label}</p>
                 </div>
                 {presentation.action ? (
-                  <Link href={`/learn/${encodeURIComponent(courseId)}/lessons/${encodeURIComponent(lesson.documentId)}`} className="col-start-2 inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 hover:text-blue-900 sm:col-start-3">
-                    {presentation.action} <span aria-hidden="true" className="ml-1">→</span>
+                  <Link href={`/learn/${encodeURIComponent(courseId)}/lessons/${encodeURIComponent(lesson.documentId)}`} className="context-link col-start-2 text-blue-700 hover:text-blue-900 sm:col-start-3">
+                    {presentation.action} <span aria-hidden="true">→</span>
                   </Link>
-                ) : null}
+                ) : <span className="col-start-2 flex min-h-11 items-center text-sm text-slate-500 sm:col-start-3">Unavailable</span>}
               </li>
             );
           })}
