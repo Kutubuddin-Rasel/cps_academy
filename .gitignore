@@ -41,7 +41,6 @@ coverage/
 # Next.js (assuming frontend will be added)
 .next/
 out/
-/docs
 /.agents
 build/
 backend/database/migrations/.gitkeep
