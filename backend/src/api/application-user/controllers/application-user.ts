@@ -11,18 +11,17 @@ export default {
 
     const userId = stateUser.id;
 
-    const dbUser: unknown = await strapi.entityService.findOne(
-      "plugin::users-permissions.user",
-      userId,
-      {
+    const dbUser: unknown = await strapi
+      .documents("plugin::users-permissions.user")
+      .findFirst({
+        filters: { id: userId },
         fields: ["id", "username", "email"],
         populate: {
           role: {
             fields: ["name", "type"],
           },
         },
-      }
-    );
+      });
 
     if (!isUnknownRecord(dbUser)) {
       return ctx.unauthorized();
@@ -66,9 +65,9 @@ export default {
       return ctx.forbidden("Access denied.");
     }
 
-    const instructorsData: unknown = await strapi.entityService.findMany(
-      "plugin::users-permissions.user",
-      {
+    const instructorsData: unknown = await strapi
+      .documents("plugin::users-permissions.user")
+      .findMany({
         filters: {
           role: {
             type: "instructor",
@@ -76,8 +75,7 @@ export default {
         },
         fields: ["id", "username"],
         sort: { username: "asc" },
-      }
-    );
+      });
 
     if (!Array.isArray(instructorsData)) {
       throw new Error("Failed to load instructors.");

@@ -33,7 +33,9 @@ function requireAdmin(ctx: Context): void {
   }
 
   if (user.roleName !== LMS_ROLES.ADMIN) {
-    throw new ForbiddenError("Only Admin can manage application users and stats.");
+    throw new ForbiddenError(
+      "Only Admin can manage application users and stats.",
+    );
   }
 }
 
@@ -122,9 +124,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     }
 
     const currentRoleType = user.role?.type;
-    const targetRoleType = requestedRole === null
-      ? "authenticated"
-      : LMS_ROLE_TYPES[requestedRole];
+    const targetRoleType =
+      requestedRole === null ? "authenticated" : LMS_ROLE_TYPES[requestedRole];
 
     if (currentRoleType === targetRoleType) {
       ctx.body = { data: { user: userResponse(user) } };
@@ -195,7 +196,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       strapi.documents("api::course.course").count({}),
       strapi.documents("api::enrollment.enrollment").count({}),
     ]);
-    const byRole = { Admin: 0, "Content Manager": 0, Instructor: 0, Student: 0, Unassigned: 0 };
+    const byRole = {
+      Admin: 0,
+      "Content Manager": 0,
+      Instructor: 0,
+      Student: 0,
+      Unassigned: 0,
+    };
 
     for (const user of users) {
       const roleName = user.role?.name;
