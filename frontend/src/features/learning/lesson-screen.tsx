@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ApiError, requestErrorMessage } from "@/lib/api/error";
-import { completeLesson, getLesson } from "./api";
+import { completeLesson, getCourseLessons, getLesson } from "./api";
+import { findAvailableLesson } from "./presentation";
 import { ProgressSummary } from "./progress-summary";
-import type { CourseProgress, Lesson } from "./types";
+import type { CourseLesson, CourseProgress, Lesson } from "./types";
 
 export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonId: string }) {
   const { state: auth, logout } = useAuth();
   const token = auth.status === "authenticated" ? auth.token : null;
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [courseLessons, setCourseLessons] = useState<CourseLesson[] | null>(null);
   const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [reload, setReload] = useState(0);
   const [completing, setCompleting] = useState(false);
@@ -30,8 +32,15 @@ export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonI
       if (error instanceof ApiError && error.status === 401) logout();
       else setLoadError(error instanceof ApiError ? error : new ApiError(0, requestErrorMessage(error)));
     });
+    void getCourseLessons(courseId, token, controller.signal).then((values) => {
+      if (!controller.signal.aborted) setCourseLessons(values);
+    }).catch((error: unknown) => {
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiError && error.status === 401) logout();
+      else setCourseLessons(null);
+    });
     return () => { controller.abort(); completionRequest.current?.abort(); };
-  }, [lessonId, token, logout, reload]);
+  }, [courseId, lessonId, token, logout, reload]);
 
   async function markComplete() {
     if (!token || !lesson || lesson.completed || completionRequest.current) return;
@@ -44,6 +53,14 @@ export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonI
       if (controller.signal.aborted) return;
       setLesson((current) => current ? { ...current, completed: true } : current);
       setProgress(updatedProgress);
+      try {
+        const refreshedLessons = await getCourseLessons(courseId, token, controller.signal);
+        if (!controller.signal.aborted) setCourseLessons(refreshedLessons);
+      } catch (error: unknown) {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) logout();
+        else setCourseLessons(null);
+      }
     } catch (error: unknown) {
       if (controller.signal.aborted) return;
       if (error instanceof ApiError && error.status === 401) logout();
@@ -56,6 +73,8 @@ export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonI
     }
   }
 
+  const nextLesson = lesson?.completed && courseLessons ? findAvailableLesson(courseLessons, lessonId) : null;
+
   let videoHref: string | null = null;
   if (lesson?.videoUrl) {
     try {
@@ -67,8 +86,8 @@ export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonI
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 [overflow-wrap:anywhere]">
-      <Link href={courseHref} className="text-link">Back to course overview</Link>
+    <div className="mx-auto max-w-3xl space-y-8 [overflow-wrap:anywhere]">
+      <Link href={courseHref} className="text-link inline-flex min-h-11 items-center">← Back to course overview</Link>
       {loadError ? (
         <section className="rounded-xl border border-red-200 bg-white p-6">
           <h1 className="text-2xl font-semibold">
@@ -83,25 +102,27 @@ export function LessonScreen({ courseId, lessonId }: { courseId: string; lessonI
       ) : (
         <>
           <div>
-            <p className="text-sm font-medium text-slate-600">Lesson {lesson.order}</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">{lesson.title}</h1>
-            <p className={`mt-3 text-sm font-medium ${lesson.completed ? "text-emerald-800" : "text-slate-600"}`}>{lesson.completed ? "Completed" : "Not completed yet"}</p>
+            <p className="font-mono text-sm tabular-nums text-blue-700">Lesson {String(lesson.order).padStart(2, "0")}</p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.03em] text-slate-950">{lesson.title}</h1>
+            {lesson.completed ? <p className="mt-3 text-sm font-medium text-emerald-800">Completed</p> : null}
           </div>
-          <section aria-label="Lesson content" className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-            <p className="whitespace-pre-wrap leading-8 text-slate-700">{lesson.content || "No written content has been added to this lesson."}</p>
+          <section aria-label="Lesson content" className="space-y-7 border-y border-slate-200 py-8">
+            <p className="whitespace-pre-wrap text-lg leading-9 text-slate-700">{lesson.content || "No written content has been added to this lesson."}</p>
             {videoHref ? (
-              <a href={videoHref} target="_blank" rel="noopener noreferrer" className="text-link inline-block">Open lesson video (opens in a new tab)</a>
+              <a href={videoHref} target="_blank" rel="noopener noreferrer" className="text-link inline-flex min-h-11 items-center">Open lesson video (opens in a new tab)</a>
             ) : lesson.videoUrl ? <p className="text-sm text-slate-600">A safe video link is not available for this lesson.</p> : null}
           </section>
           <div className="space-y-4">
             {completionError ? <p id="completion-error" role="alert" className="text-red-800">{completionError.status === 409 ? "Complete earlier lessons before marking this lesson complete. " : ""}{completionError.message}</p> : null}
-            <button type="button" className="button-primary" disabled={completing || lesson.completed} aria-describedby={completionError ? "completion-error" : undefined} onClick={() => { void markComplete(); }}>
-              {completing ? "Saving completion…" : lesson.completed ? "Lesson completed" : "Mark complete"}
-            </button>
+            {!lesson.completed ? <button type="button" className="button-primary" disabled={completing} aria-describedby={completionError ? "completion-error" : undefined} onClick={() => { void markComplete(); }}>
+              {completing ? "Saving completion…" : "Mark complete"}
+            </button> : null}
             {progress ? <p role="status" className="text-emerald-800">Lesson marked complete. Your progress has been saved.</p> : null}
           </div>
           {progress ? <ProgressSummary {...progress} /> : null}
-          <Link href={courseHref} className="button-secondary">Return to course</Link>
+          {lesson.completed && nextLesson ? (
+            <Link href={`/learn/${encodeURIComponent(courseId)}/lessons/${encodeURIComponent(nextLesson.documentId)}`} className="button-primary">Continue to {nextLesson.title}</Link>
+          ) : <Link href={courseHref} className="button-secondary">Return to Course</Link>}
         </>
       )}
     </div>

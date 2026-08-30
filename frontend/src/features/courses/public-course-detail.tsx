@@ -57,32 +57,36 @@ export function PublicCourseDetailView({ course }: { course: PublicCourseDetail 
 
   return (
     <article className="[overflow-wrap:anywhere]">
-      <Link href="/courses" className="text-link">← Back to courses</Link>
-      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-        <div>
-          <p className="section-kicker">Course overview</p>
-          <h1 className="page-heading">{course.title}</h1>
-          <p className="mt-4 font-medium text-slate-500">Instructor · {course.instructor?.username ?? "CPS Academy instructor"}</p>
-          <section className="mt-10">
-            <h2 className="text-2xl font-semibold tracking-tight">About this course</h2>
-            <p className="mt-4 whitespace-pre-line text-lg leading-8 text-slate-600">{course.description || "Course details are being prepared."}</p>
-          </section>
-          <section className="mt-12">
-            <div className="flex items-end justify-between gap-4"><h2 className="text-2xl font-semibold tracking-tight">Course syllabus</h2><span className="text-sm text-slate-500">{course.syllabus.length} lessons</span></div>
-            {course.syllabus.length === 0 ? <p className="mt-5 rounded-2xl border border-slate-200 bg-white p-6">The syllabus is being prepared.</p> : (
-              <ol className="learning-path mt-6">
+      <Link href="/courses" className="text-link inline-flex min-h-11 items-center">← Back to Courses</Link>
+      <header className="mt-5 max-w-4xl">
+        <h1 className="page-heading mt-0">{course.title}</h1>
+        <p className="mt-6 max-w-3xl whitespace-pre-line text-lg leading-8 text-slate-600">{course.description || "Course details are being prepared."}</p>
+        {course.instructor ? <p className="mt-5 text-sm text-slate-600"><span className="font-medium text-slate-700">Instructor</span> · {course.instructor.username}</p> : null}
+      </header>
+
+      <section aria-labelledby="course-structure" className="mt-12">
+        <div className="max-w-3xl border-t border-slate-200 pt-6">
+          <p className="font-mono text-sm tabular-nums text-blue-700">{course.syllabus.length} {course.syllabus.length === 1 ? "lesson" : "lessons"}</p>
+          <h2 id="course-structure" className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Course structure</h2>
+          <p className="mt-3 leading-7 text-slate-600">Follow this instructor-designed learning path in order after you enroll.</p>
+        </div>
+
+        <div className="mt-7 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-12">
+          <div>
+            {course.syllabus.length === 0 ? <p className="border-l-2 border-slate-300 pl-5 text-slate-600">The syllabus is being prepared.</p> : (
+              <ol className="relative border-y border-slate-200 before:absolute before:bottom-8 before:left-4 before:top-8 before:w-px before:bg-blue-200">
                 {course.syllabus.map((lesson) => (
-                  <li key={`${lesson.order}-${lesson.title}`} className="learning-path-item">
-                    <span className="learning-path-node" aria-hidden="true">{lesson.order}</span>
-                    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-5 py-4"><p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Lesson {lesson.order}</p><h3 className="mt-1 text-lg font-semibold text-slate-950">{lesson.title}</h3></div>
+                  <li key={`${lesson.order}-${lesson.title}`} className="relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-4 border-b border-slate-200 py-5 last:border-b-0">
+                    <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-blue-300 bg-slate-50 font-mono text-xs tabular-nums text-blue-800">{String(lesson.order).padStart(2, "0")}</span>
+                    <h3 className="min-w-0 text-lg font-semibold text-slate-950">{lesson.title}</h3>
                   </li>
                 ))}
               </ol>
             )}
-          </section>
-        </div>
-        <aside className="rounded-2xl border border-sky-200 bg-sky-50 p-6 lg:sticky lg:top-6">
-          <h2 className="text-xl font-semibold text-slate-950">Start this course</h2>
+          </div>
+
+          <aside className="border-y border-slate-200 bg-white py-6 lg:rounded-xl lg:border lg:border-blue-200 lg:bg-blue-50 lg:p-6">
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Start this course</h2>
           <p className="mt-3 leading-7 text-slate-600">Enroll to unlock protected lessons, progress tracking, and quizzes.</p>
           <div className="mt-6 flex flex-col gap-3">
             {auth.status === "loading" ? (
@@ -98,8 +102,9 @@ export function PublicCourseDetailView({ course }: { course: PublicCourseDetail 
             )}
           </div>
           {message ? <p role={message.error ? "alert" : "status"} className={`mt-4 text-sm ${message.error ? "text-red-800" : "text-emerald-800"}`}>{message.text}</p> : null}
-        </aside>
-      </div>
+          </aside>
+        </div>
+      </section>
     </article>
   );
 }

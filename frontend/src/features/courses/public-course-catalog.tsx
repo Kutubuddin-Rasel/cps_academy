@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { ApiError, requestErrorMessage } from "@/lib/api/error";
 import { enrollInCourse, getEnrollments, getPublicCourses } from "./api";
 import { CourseCard } from "./course-card";
+import { publicCourseGridClassName } from "./public-course-layout";
 import type { EnrollmentSummary, PublicCourseSummary } from "./types";
 
 type CatalogState =
@@ -72,31 +73,30 @@ export function PublicCourseCatalog() {
   }
 
   return (
-    <div className="space-y-10 [overflow-wrap:anywhere]">
+    <div className="space-y-9">
       <header className="max-w-3xl">
         <p className="section-kicker">Course catalog</p>
-        <h1 className="page-heading">Find your next learning path.</h1>
-        <p className="page-intro">Explore every CPS Academy course before signing in. Course learning materials remain available only after enrollment.</p>
+        <h1 className="page-heading">Courses</h1>
+        <p className="page-intro">Explore CPS Academy courses and review each syllabus before you enroll.</p>
       </header>
-      {feedback?.courseId === "" ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{feedback.message}</p> : null}
-      {catalog.status === "loading" ? <p role="status">Loading courses…</p> : catalog.status === "error" ? (
-        <div className="rounded-2xl border border-red-200 bg-white p-6">
+      {feedback?.courseId === "" ? <p role="alert" className="border-l-2 border-red-700 bg-red-50 px-4 py-3 text-red-800">{feedback.message}</p> : null}
+      {catalog.status === "loading" ? <p role="status" className="text-slate-600">Loading courses…</p> : catalog.status === "error" ? (
+        <div className="border-l-2 border-red-700 bg-red-50 px-5 py-4">
           <p role="alert" className="text-red-800">{catalog.message}</p>
           <button type="button" className="button-secondary mt-4" onClick={() => { setCatalog({ status: "loading" }); setReload((value) => value + 1); }}>Try again</button>
         </div>
       ) : catalog.courses.length === 0 ? (
-        <p className="rounded-2xl border border-slate-200 bg-white p-6">No courses are available yet. Please check back later.</p>
+        <p className="border-l-2 border-slate-300 pl-5 text-slate-600">No courses are available yet. Please check back later.</p>
       ) : (
-        <ul className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <ul className={publicCourseGridClassName(catalog.courses.length)}>
           {catalog.courses.map((course) => {
             const enrolled = enrollments.some((item) => item.course.documentId === course.documentId);
-            let actions = null;
-            if (auth.status === "unauthenticated") {
-              actions = <Link href={`/login?next=${encodeURIComponent(`/courses/${course.documentId}`)}`} className="button-primary">Sign in to enroll</Link>;
-            } else if (student && enrollmentsReady) {
+            const courseHref = `/courses/${encodeURIComponent(course.documentId)}`;
+            let actions = <Link href={courseHref} className="button-primary">View course</Link>;
+            if (student && enrollmentsReady) {
               actions = enrolled
-                ? <Link href={`/learn/${encodeURIComponent(course.documentId)}`} className="button-primary">Continue learning</Link>
-                : <button type="button" className="button-primary" disabled={enrolling !== null} onClick={() => { void enroll(course.documentId); }}>{enrolling === course.documentId ? "Enrolling…" : "Enroll"}</button>;
+                ? <><Link href={`/learn/${encodeURIComponent(course.documentId)}`} className="button-primary">Continue learning</Link><Link href={courseHref} className="button-tertiary">View course</Link></>
+                : <><Link href={courseHref} className="button-primary">View course</Link><button type="button" className="button-tertiary" disabled={enrolling !== null} onClick={() => { void enroll(course.documentId); }}>{enrolling === course.documentId ? "Enrolling…" : "Enroll"}</button></>;
             }
             return (
               <li key={course.documentId}>
@@ -107,12 +107,6 @@ export function PublicCourseCatalog() {
           })}
         </ul>
       )}
-      {auth.status === "unauthenticated" ? (
-        <div className="rounded-2xl bg-slate-950 px-6 py-8 text-white sm:flex sm:items-center sm:justify-between sm:gap-8">
-          <div><h2 className="text-2xl font-semibold">Ready to start?</h2><p className="mt-2 text-slate-300">Create a Student account, then enroll in any course.</p></div>
-          <Link href="/register" className="mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-sky-50 sm:mt-0">Create account</Link>
-        </div>
-      ) : null}
     </div>
   );
 }
