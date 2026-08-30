@@ -52,12 +52,14 @@ export function AppHeader() {
                 ))}
               </ul>
             </nav>
-            <div className="hidden items-center gap-2 lg:flex">
+            <div className="hidden items-center gap-3 lg:flex">
               <Link href="/account" aria-current={pathname === "/account" ? "page" : undefined}
-                className="flex min-h-11 max-w-48 items-center border-b-2 border-transparent px-2 text-left text-sm text-slate-600 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:text-blue-800">
-                <span className="min-w-0"><span className="block truncate font-semibold">{state.user.username}</span><span className="block truncate text-xs">{state.user.role ?? "No LMS role"}</span></span>
+                aria-label="Open account"
+                className="flex min-h-11 max-w-48 items-center border-b-2 border-transparent px-1 text-left text-sm font-semibold text-slate-700 transition-colors hover:text-blue-800 aria-[current=page]:border-blue-700 aria-[current=page]:text-blue-800 motion-reduce:transition-none">
+                <span className="truncate">{state.user.username}</span>
               </Link>
-              <button type="button" className="button-secondary" onClick={() => { setMenuOpen(false); logout(); }}>Log out</button>
+              <span aria-hidden="true" className="h-6 w-px bg-slate-200" />
+              <button type="button" className="utility-action" onClick={() => { setMenuOpen(false); logout(); }}>Log out</button>
             </div>
             <button type="button" className="button-secondary lg:hidden" aria-expanded={menuOpen} aria-controls="account-navigation"
               onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? "Close menu" : "Menu"}</button>
@@ -96,10 +98,11 @@ export function AppHeader() {
           </nav>
           <div className="mt-3 border-t border-slate-200 pt-4">
             <Link href="/account" onClick={() => setMenuOpen(false)} aria-current={pathname === "/account" ? "page" : undefined}
-              className="flex min-h-11 items-center border-l-2 border-transparent px-3 text-sm text-slate-600 hover:text-slate-950 aria-[current=page]:border-blue-700 aria-[current=page]:text-blue-800">
-              <span className="min-w-0"><span className="block truncate font-semibold">{state.user.username}</span><span className="block truncate text-xs">{state.user.role ?? "No LMS role"}</span></span>
+              aria-label="Open account"
+              className="flex min-h-11 items-center border-l-2 border-transparent px-3 text-sm font-semibold text-slate-700 transition-colors hover:text-blue-800 aria-[current=page]:border-blue-700 aria-[current=page]:text-blue-800 motion-reduce:transition-none">
+              <span className="truncate">{state.user.username}</span>
             </Link>
-            <button type="button" className="button-secondary mt-3 w-full" onClick={() => { setMenuOpen(false); logout(); }}>Log out</button>
+            <button type="button" className="utility-action mt-2 w-full justify-start px-3" onClick={() => { setMenuOpen(false); logout(); }}>Log out</button>
           </div>
         </div>
       ) : menuOpen ? (

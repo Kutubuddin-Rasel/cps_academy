@@ -56,6 +56,14 @@ body {
     @apply font-medium text-blue-700 underline underline-offset-4 hover:text-blue-900;
   }
 
+  .context-link {
+    @apply inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-slate-600 transition-colors hover:text-blue-800 active:text-blue-900 motion-reduce:transition-none;
+  }
+
+  .utility-action {
+    @apply inline-flex min-h-11 items-center justify-center px-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-950 active:text-blue-900 disabled:cursor-not-allowed disabled:text-slate-400 motion-reduce:transition-none;
+  }
+
   .section-kicker {
     @apply text-xs font-semibold uppercase tracking-[0.16em] text-blue-700;
   }
