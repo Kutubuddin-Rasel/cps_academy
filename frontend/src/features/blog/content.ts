@@ -1,6 +1,7 @@
 import type { BlogParagraph } from "./types";
 
 const PARAGRAPH_BREAK = /\n\s*\n/;
+const WHITESPACE = /\s+/g;
 
 export function bodyToBlocks(body: string): BlogParagraph[] {
   return body.trim().split(PARAGRAPH_BREAK).map((paragraph) => ({
@@ -13,7 +14,10 @@ export function blocksToBody(content: BlogParagraph[]): string {
   return content.map((paragraph) => paragraph.children.map((child) => child.text).join("")).join("\n\n");
 }
 
-export function blogExcerpt(content: BlogParagraph[], length = 150): string {
-  const text = blocksToBody(content).replaceAll("\n", " ").trim();
-  return text.length > length ? `${text.slice(0, length).trimEnd()}…` : text;
+export function blogExcerpt(content: BlogParagraph[]): string {
+  for (const paragraph of content) {
+    const text = paragraph.children.map((child) => child.text).join("").replace(WHITESPACE, " ").trim();
+    if (text) return text;
+  }
+  return "";
 }

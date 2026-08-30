@@ -1,22 +1,42 @@
 import Link from "next/link";
 import { blogExcerpt } from "./content";
-import { BlogCover } from "./blog-cover";
 import type { BlogPost } from "./types";
 
 export function formattedBlogDate(value: string | null): string {
   return value ? new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(value)) : "Draft";
 }
 
-export function BlogCard({ post, compact = false }: { post: BlogPost; compact?: boolean }) {
+interface BlogStoryProps {
+  post: BlogPost;
+  headingLevel: 2 | 3;
+}
+
+export function BlogLeadStory({ post, headingLevel }: BlogStoryProps) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
+  const href = `/blog/${encodeURIComponent(post.documentId)}`;
+
   return (
-    <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <BlogCover coverUrl={post.coverUrl} title={post.title} className={`${compact ? "h-36" : "h-48"} w-full object-cover`} />
-      <div className="flex flex-1 flex-col p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">{formattedBlogDate(post.publishedAt)}</p>
-        <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-950">{post.title}</h2>
-        <p className="mt-4 leading-7 text-slate-600">{blogExcerpt(post.content) || "Read the latest from CPS Academy."}</p>
-        <div className="mt-auto pt-6"><Link href={`/blog/${encodeURIComponent(post.documentId)}`} className="text-link">Read article →</Link></div>
-      </div>
+    <article className="min-w-0">
+      <time dateTime={post.publishedAt ?? undefined} className="text-sm text-slate-500">{formattedBlogDate(post.publishedAt)}</time>
+      <Heading className="mt-3 max-w-2xl text-3xl font-semibold tracking-[-0.025em] text-slate-950">
+        <Link href={href} className="inline-flex min-h-11 items-center transition-colors hover:text-blue-800 motion-reduce:transition-none">{post.title}</Link>
+      </Heading>
+      <p className="mt-5 line-clamp-4 max-w-2xl [overflow-wrap:normal] text-lg leading-8 text-slate-600">{blogExcerpt(post.content) || "Read the latest from CPS Academy."}</p>
+      <Link href={href} className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 hover:text-blue-900">Read article <span aria-hidden="true" className="ml-1">→</span></Link>
+    </article>
+  );
+}
+
+export function BlogStoryRow({ post, headingLevel }: BlogStoryProps) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
+  const href = `/blog/${encodeURIComponent(post.documentId)}`;
+
+  return (
+    <article className="grid min-w-0 gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-8">
+      <Heading className="text-lg font-semibold tracking-tight text-slate-950">
+        <Link href={href} className="inline-flex min-h-11 items-center transition-colors hover:text-blue-800 motion-reduce:transition-none">{post.title}<span aria-hidden="true" className="ml-2 text-sm font-normal text-blue-700">→</span></Link>
+      </Heading>
+      <time dateTime={post.publishedAt ?? undefined} className="text-sm text-slate-500 sm:text-right">{formattedBlogDate(post.publishedAt)}</time>
     </article>
   );
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getPublishedPosts } from "@/features/blog/api";
-import { BlogCard } from "@/features/blog/blog-card";
+import { BlogLeadStory, BlogStoryRow } from "@/features/blog/blog-card";
 import { requestErrorMessage } from "@/lib/api/error";
 import type { BlogPost } from "@/features/blog/types";
 
@@ -14,11 +14,22 @@ export default async function BlogPage() {
   } catch (error: unknown) {
     errorMessage = requestErrorMessage(error);
   }
-  if (errorMessage) return <section className="rounded-2xl border border-red-200 bg-white p-6"><h1 className="text-2xl font-semibold">Blog unavailable</h1><p role="alert" className="mt-3 text-red-800">{errorMessage}</p></section>;
+  if (errorMessage) return <section className="border-l-2 border-red-700 bg-red-50 px-5 py-4"><h1 className="text-2xl font-semibold">Blog unavailable</h1><p role="alert" className="mt-3 text-red-800">{errorMessage}</p></section>;
+  const [leadPost, ...remainingPosts] = posts;
+
   return (
-    <div className="space-y-10">
-      <header className="max-w-3xl"><p className="section-kicker">Academy notes</p><h1 className="page-heading">CPS Academy Blog</h1><p className="page-intro">Published updates about structured learning, teaching, and progress across the academy.</p></header>
-      {posts.length === 0 ? <p className="rounded-2xl border border-slate-200 bg-white p-6">No published posts yet.</p> : <ul className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">{posts.map((post) => <li key={post.documentId}><BlogCard post={post} /></li>)}</ul>}
+    <div className="mx-auto max-w-4xl">
+      <header className="max-w-2xl"><h1 className="page-heading mt-0">Blog</h1><p className="page-intro">Updates about courses, teaching, and learning across CPS Academy.</p></header>
+      {!leadPost ? <p className="mt-9 border-l-2 border-slate-300 pl-5 text-slate-600">No published posts yet.</p> : (
+        <div className="mt-10">
+          <div className="border-y border-slate-300 py-8 sm:py-10"><BlogLeadStory post={leadPost} headingLevel={2} /></div>
+          {remainingPosts.length ? (
+            <ul className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+              {remainingPosts.map((post) => <li key={post.documentId}><BlogStoryRow post={post} headingLevel={2} /></li>)}
+            </ul>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
