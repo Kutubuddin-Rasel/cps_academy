@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f4f2ec;
+  --foreground: #19323b;
+  --brand-ink: #193740;
+  --brand-teal: #0e6663;
+  --brand-teal-dark: #094e4c;
+  --brand-teal-soft: #e2efec;
+  --brand-brass: #87591f;
+  --brand-brass-soft: #f1e6d4;
+  --brand-surface: #fffefb;
   color-scheme: light;
 }
 
@@ -20,9 +27,14 @@ body {
   line-height: 1.5;
 }
 
+::selection {
+  background: var(--brand-teal-soft);
+  color: var(--brand-ink);
+}
+
 @layer base {
   :focus-visible {
-    outline: 3px solid var(--color-blue-600);
+    outline: 3px solid var(--brand-teal);
     outline-offset: 3px;
   }
 
@@ -33,7 +45,7 @@ body {
 
 @layer components {
   .button-primary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-800 active:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--brand-teal)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-[background-color,transform,box-shadow] hover:bg-[var(--brand-teal-dark)] hover:shadow-md active:translate-y-px active:bg-[var(--brand-ink)] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none motion-reduce:transform-none motion-reduce:transition-none;
   }
 
   .button-secondary {
@@ -41,7 +53,7 @@ body {
   }
 
   .button-tertiary {
-    @apply inline-flex min-h-11 items-center justify-center rounded-lg px-2 py-2.5 text-sm font-semibold text-blue-700 underline-offset-4 transition-colors hover:bg-blue-50 hover:text-blue-900 hover:underline active:bg-blue-100 disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-400 disabled:no-underline motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg px-2 py-2.5 text-sm font-semibold text-[var(--brand-teal)] underline-offset-4 transition-colors hover:bg-[var(--brand-teal-soft)] hover:text-[var(--brand-ink)] hover:underline active:bg-[var(--brand-brass-soft)] disabled:cursor-not-allowed disabled:bg-transparent disabled:text-slate-400 disabled:no-underline motion-reduce:transition-none;
   }
 
   .field-label {
@@ -49,23 +61,23 @@ body {
   }
 
   .field-input {
-    @apply block min-h-11 w-full rounded-lg border border-slate-400 bg-white px-3 py-2.5 text-base text-slate-950 transition-colors placeholder:text-slate-500 focus-visible:border-blue-700 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none;
+    @apply block min-h-11 w-full rounded-lg border border-slate-400 bg-[var(--brand-surface)] px-3 py-2.5 text-base text-slate-950 transition-colors placeholder:text-slate-500 focus-visible:border-[var(--brand-teal)] disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-500 motion-reduce:transition-none;
   }
 
   .text-link {
-    @apply font-medium text-blue-700 underline underline-offset-4 hover:text-blue-900;
+    @apply font-medium text-[var(--brand-teal)] underline underline-offset-4 transition-colors hover:text-[var(--brand-ink)] motion-reduce:transition-none;
   }
 
   .context-link {
-    @apply inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-slate-600 transition-colors hover:text-blue-800 active:text-blue-900 motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-slate-600 transition-colors hover:text-[var(--brand-teal)] active:text-[var(--brand-ink)] motion-reduce:transition-none;
   }
 
   .utility-action {
-    @apply inline-flex min-h-11 items-center justify-center px-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-950 active:text-blue-900 disabled:cursor-not-allowed disabled:text-slate-400 motion-reduce:transition-none;
+    @apply inline-flex min-h-11 items-center justify-center px-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-950 active:text-[var(--brand-teal)] disabled:cursor-not-allowed disabled:text-slate-400 motion-reduce:transition-none;
   }
 
   .section-kicker {
-    @apply text-xs font-semibold uppercase tracking-[0.16em] text-blue-700;
+    @apply text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-brass)];
   }
 
   .page-heading {
@@ -77,11 +89,23 @@ body {
   }
 
   .section-heading {
-    @apply mt-2 text-2xl font-semibold tracking-[-0.025em] text-slate-950;
+    @apply mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-3xl;
   }
 
   .section-heading-row {
     @apply flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end;
+  }
+
+  .navigation-link {
+    @apply relative flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-[var(--brand-teal-soft)] hover:text-[var(--brand-ink)] aria-[current=page]:bg-[var(--brand-teal-soft)] aria-[current=page]:font-semibold aria-[current=page]:text-[var(--brand-ink)] motion-reduce:transition-none;
+  }
+
+  .navigation-link[aria-current="page"]::after {
+    @apply absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--brand-brass)] content-[''];
+  }
+
+  .mobile-navigation-link {
+    @apply flex min-h-11 items-center rounded-lg border-l-2 border-transparent px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-[var(--brand-teal-soft)] hover:text-[var(--brand-ink)] aria-[current=page]:border-[var(--brand-brass)] aria-[current=page]:bg-[var(--brand-teal-soft)] aria-[current=page]:font-semibold aria-[current=page]:text-[var(--brand-ink)] motion-reduce:transition-none;
   }
 
 }
