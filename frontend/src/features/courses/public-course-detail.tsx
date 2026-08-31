@@ -134,7 +134,7 @@ export function PublicCourseDetailView({ course }: { course: PublicCourseDetail 
 
       <section aria-labelledby="course-structure" className="mt-12">
         <div className="max-w-3xl border-t border-slate-200 pt-6">
-          <p className="font-mono text-sm tabular-nums text-blue-700">{course.syllabus.length} {course.syllabus.length === 1 ? "lesson" : "lessons"}</p>
+          <p className="font-mono text-sm tabular-nums text-[var(--brand-teal)]">{course.syllabus.length} {course.syllabus.length === 1 ? "lesson" : "lessons"}</p>
           <h2 id="course-structure" className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Course structure</h2>
           <p className="mt-3 leading-7 text-slate-600">Follow this instructor-designed learning path in order.</p>
         </div>
@@ -142,10 +142,10 @@ export function PublicCourseDetailView({ course }: { course: PublicCourseDetail 
         <div className="mt-7 grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-12">
           <div>
             {course.syllabus.length === 0 ? <p className="border-l-2 border-slate-300 pl-5 text-slate-600">The syllabus is being prepared.</p> : (
-              <ol className="relative border-y border-slate-200 before:absolute before:bottom-8 before:left-4 before:top-8 before:w-px before:bg-blue-200">
+              <ol className="relative border-y border-slate-200 before:absolute before:bottom-8 before:left-4 before:top-8 before:w-px before:bg-[var(--brand-brass-soft)]">
                 {course.syllabus.map((lesson) => (
                   <li key={`${lesson.order}-${lesson.title}`} className="relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-center gap-4 border-b border-slate-200 py-5 last:border-b-0">
-                    <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-blue-300 bg-slate-50 font-mono text-xs tabular-nums text-blue-800">{String(lesson.order).padStart(2, "0")}</span>
+                    <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--brand-brass-soft)] bg-[var(--brand-surface)] font-mono text-xs tabular-nums text-[var(--brand-brass)]">{String(lesson.order).padStart(2, "0")}</span>
                     <h3 className="min-w-0 text-lg font-semibold text-slate-950">{lesson.title}</h3>
                   </li>
                 ))}
@@ -153,7 +153,7 @@ export function PublicCourseDetailView({ course }: { course: PublicCourseDetail 
             )}
           </div>
 
-          <aside className="border-y border-slate-200 bg-white py-6 lg:rounded-xl lg:border lg:border-blue-200 lg:bg-blue-50 lg:p-6">
+          <aside className="border-y border-slate-200 bg-white py-6 lg:rounded-xl lg:border lg:border-[#bdd4cf] lg:bg-[var(--brand-teal-soft)] lg:p-6">
           <h2 className="text-2xl font-semibold tracking-tight text-slate-950">{accessHeading}</h2>
           <p className="mt-3 leading-7 text-slate-600">{accessDescription}</p>
           <div className="mt-6 flex flex-col gap-3">

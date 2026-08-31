@@ -10,7 +10,9 @@ export function LandingActions() {
       <Link href="/courses" className="button-primary">Browse courses</Link>
       {state.status === "authenticated" ? (
         <Link href={state.user.role === "Student" ? "/my-courses" : "/account"} className="button-secondary">{state.user.role === "Student" ? "Continue learning" : "Open account"}</Link>
-      ) : null}
+      ) : (
+        <Link href="#how-learning-works" className="button-secondary">See how it works</Link>
+      )}
     </div>
   );
 }

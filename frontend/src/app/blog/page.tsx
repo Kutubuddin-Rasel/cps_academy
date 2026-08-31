@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getPublishedPosts } from "@/features/blog/api";
-import { BlogLeadStory, BlogStoryRow } from "@/features/blog/blog-card";
+import { BlogLatestStory, BlogStoryCard } from "@/features/blog/blog-card";
 import { requestErrorMessage } from "@/lib/api/error";
 import type { BlogPost } from "@/features/blog/types";
 
@@ -14,19 +14,31 @@ export default async function BlogPage() {
   } catch (error: unknown) {
     errorMessage = requestErrorMessage(error);
   }
-  if (errorMessage) return <section className="border-l-2 border-red-700 bg-red-50 px-5 py-4"><h1 className="text-2xl font-semibold">Blog unavailable</h1><p role="alert" className="mt-3 text-red-800">{errorMessage}</p></section>;
+  if (errorMessage) return <section className="rounded-xl border border-red-200 border-l-4 border-l-red-700 bg-red-50 px-5 py-5 sm:px-6"><h1 className="text-2xl font-semibold text-slate-950">Blog unavailable</h1><p role="alert" className="mt-3 text-red-800">{errorMessage}</p></section>;
   const [leadPost, ...remainingPosts] = posts;
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <header className="max-w-2xl"><h1 className="page-heading mt-0">Blog</h1><p className="page-intro">Updates about courses, teaching, and learning across CPS Academy.</p></header>
-      {!leadPost ? <p className="mt-9 border-l-2 border-slate-300 pl-5 text-slate-600">No published posts yet.</p> : (
-        <div className="mt-10">
-          <div className="border-y border-slate-300 py-8 sm:py-10"><BlogLeadStory post={leadPost} headingLevel={2} /></div>
+    <div className="mx-auto max-w-6xl">
+      <header className="max-w-3xl border-l-4 border-[var(--brand-brass)] pl-5 sm:pl-7">
+        <p className="section-kicker">CPS Academy Blog</p>
+        <h1 className="page-heading">Ideas on learning and building.</h1>
+        <p className="page-intro">Updates about courses, teaching, and learning across CPS Academy.</p>
+      </header>
+      {!leadPost ? (
+        <div className="mt-12 rounded-xl border border-slate-200 bg-white px-6 py-8">
+          <h2 className="text-xl font-semibold text-slate-950">No published posts yet</h2>
+          <p className="mt-2 text-slate-600">Published updates will appear here.</p>
+        </div>
+      ) : (
+        <div className="mt-12">
+          <BlogLatestStory post={leadPost} headingLevel={2} />
           {remainingPosts.length ? (
-            <ul className="mt-8 divide-y divide-slate-200 border-y border-slate-200">
-              {remainingPosts.map((post) => <li key={post.documentId}><BlogStoryRow post={post} headingLevel={2} /></li>)}
-            </ul>
+            <section aria-labelledby="more-articles-heading" className="mt-14">
+              <h2 id="more-articles-heading" className="section-kicker text-slate-500">More articles</h2>
+              <ul className="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {remainingPosts.map((post) => <li key={post.documentId} className="min-w-0"><BlogStoryCard post={post} headingLevel={3} /></li>)}
+              </ul>
+            </section>
           ) : null}
         </div>
       )}
